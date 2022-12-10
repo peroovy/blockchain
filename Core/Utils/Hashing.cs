@@ -4,11 +4,15 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Core;
+namespace Core.Utils;
 
 public static class Hashing
 {
-    public static byte[] ToSHA256(params string[] values)
+    public static string ZeroHash = new('0', 64);
+    
+    public static byte[] SumSHA256(params string[] values) => SumSHA256(values as IEnumerable<string>);
+
+    public static byte[] SumSHA256(IEnumerable<string> values)
     {
         using var sha256 = SHA256.Create();
 
@@ -29,7 +33,9 @@ public static class Hashing
             yield return bits[i];
     }
 
-    public static string ToHexDigest(this byte[] bytes)
+    public static IEnumerable<bool> ToBits(this string str) => ToBits(Encoding.UTF8.GetBytes(str));
+
+    public static string ToHexDigest(this IEnumerable<byte> bytes)
     {
         var result = new StringBuilder();
 

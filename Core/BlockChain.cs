@@ -5,6 +5,8 @@ using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
+using Core.Transactions;
+using Core.Utils;
 
 namespace Core;
 
@@ -12,47 +14,48 @@ public class BlockChain
 {
     private readonly List<Block> blocks = new();
 
+    private const int StartSubsidy = 100;
+    private const int Difficult = 3;
+
     public BlockChain()
     {
-        var genesis = ComputeBlock(
-            "",
-            DateTimeOffset.Now.ToUnixTimeSeconds(),
-            "Nikita Samkov had found 1 YOX when he went to KFC",
-            3
-        );
+        var genesis = MineBlock(Hashing.ZeroHash,
+            ImmutableArray.Create(Transaction.CreateCoinbase("Anybody", StartSubsidy)), Difficult);
         blocks.Add(genesis);
     }
 
     public IEnumerable<Block> Blocks => blocks.AsReadOnly();
 
-    public void Add(string data, int difficult)
+    public void AddBlock(string address, int amount)
     {
         var previousHash = blocks.Last().Hash;
-        var timestamp = DateTimeOffset.Now.ToUnixTimeSeconds();
+        var transactions = ImmutableArray.Create(Transaction.CreateCoinbase(address, amount));
 
-        var block = ComputeBlock(previousHash, timestamp, data, difficult);
+        var block = MineBlock(previousHash, transactions, Difficult);
 
         blocks.Add(block);
     }
     
-    [SuppressMessage("ReSharper.DPA", "DPA0001: Memory allocation issues")]
-    private static Block ComputeBlock(string previousHash, long timestamp, string data, int difficult)
+    private static Block MineBlock(string previousHash, ImmutableArray<Transaction> transactions, int difficult)
     {
+        var timestamp = DateTimeOffset.Now.ToUnixTimeSeconds();
+
         for (var nonce = 0L; nonce < long.MaxValue; nonce++)
         {
-            var hash = Hashing.ToSHA256(
-                previousHash, timestamp.ToString(), data, difficult.ToString(), nonce.ToString()
-            );
+            var block = new Block(previousHash, timestamp, transactions, difficult, nonce);
 
-            var proof = hash
-                .ToBits()
-                .Take(difficult)
-                .All(bit => !bit);
-
-            if (proof)
-                return new Block(previousHash, hash.ToHexDigest(), timestamp, data, difficult, nonce);
+            if (ValidateBlock(block, difficult))
+                return block;
         }
 
         throw new InvalidOperationException("Not found nonce");
+    }
+
+    private static bool ValidateBlock(Block block, int expectedDifficult)
+    {
+        return block.Hash
+            .ToBits()
+            .Take(expectedDifficult)
+            .All(bit => !bit);
     }
 }

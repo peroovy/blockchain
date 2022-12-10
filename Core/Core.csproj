@@ -58,8 +58,12 @@
     <ItemGroup>
         <Compile Include="Block.cs" />
         <Compile Include="BlockChain.cs" />
-        <Compile Include="Hashing.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
+        <Compile Include="Transactions\Transaction.cs" />
+        <Compile Include="Transactions\Input.cs" />
+        <Compile Include="Transactions\Output.cs" />
+        <Compile Include="Utils\Hashing.cs" />
+        <Compile Include="Utils\MerkleTree.cs" />
     </ItemGroup>
     <ItemGroup>
       <None Include="App.config" />

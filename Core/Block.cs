@@ -1,17 +1,25 @@
-﻿namespace Core;
+﻿using System.Collections.Immutable;
+using System.Linq;
+using Core.Transactions;
+using Core.Utils;
+
+namespace Core;
 
 public class Block
 {
     public Block(
-        string previousHash, string hash,
-        long timestamp, string data, int difficult, long nonce)
+        string previousHash, long timestamp, 
+        ImmutableArray<Transaction> transactions, 
+        int difficult, long nonce)
     {
         PreviousHash = previousHash;
-        Hash = hash;
         Timestamp = timestamp;
-        Data = data;
         Difficult = difficult;
         Nonce = nonce;
+        TransactionsTree = MerkleTree.Create(transactions.Select(transaction => transaction.Hash));
+        Hash = Hashing
+            .SumSHA256(PreviousHash, Timestamp.ToString(), Difficult.ToString(), Nonce.ToString(), TransactionsTree.Hash)
+            .ToHexDigest();
     }
     
     public string PreviousHash { get; }
@@ -20,7 +28,7 @@ public class Block
 
     public long Timestamp { get; }
     
-    public string Data { get; }
+    public MerkleTree TransactionsTree { get; }
     
     public int Difficult { get; }
     
