@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Immutable;
+using System.Collections.Generic;
 using System.Linq;
 using Core.Utils;
 
@@ -8,10 +8,10 @@ namespace Core.Transactions;
 [Serializable]
 public class Transaction
 {
-    public Transaction(ImmutableArray<Input> inputs, ImmutableArray<Output> outputs, bool isCoinbase = false)
+    public Transaction(IReadOnlyList<Input> inputs, IReadOnlyList<Output> outputs, bool isCoinbase = false)
     {
-        Inputs = inputs.ToArray();
-        Outputs = outputs.ToArray();
+        Inputs = inputs;
+        Outputs = outputs;
         IsCoinbase = isCoinbase;
 
         var inputSumHash = string.Concat(inputs.Select(input => input.Hash));
@@ -23,17 +23,17 @@ public class Transaction
     
     public string Hash { get; }
     
-    public Input[] Inputs { get; }
+    public IReadOnlyList<Input> Inputs { get; }
     
-    public Output[] Outputs { get; }
+    public IReadOnlyList<Output> Outputs { get; }
     
     public bool IsCoinbase { get; }
 
     public static Transaction CreateCoinbase(string address, int subsidy)
     {
         return new Transaction(
-            ImmutableArray.Create(new Input(Hashing.ZeroHash, -1, $"Reward to {address}: {subsidy}")),
-            ImmutableArray.Create(new Output(subsidy, address)),
+            new List<Input> { new(Hashing.ZeroHash, -1, $"Reward to {address}: {subsidy}") },
+            new List<Output> { new(subsidy, address) },
             isCoinbase: true
         );
     }

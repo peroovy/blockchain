@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Immutable;
-using System.IO;
+using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.Serialization.Formatters.Binary;
 using Core.Transactions;
 using Core.Utils;
 
@@ -13,7 +11,7 @@ public class Block
 {
     public Block(
         string previousHash, long timestamp, 
-        ImmutableArray<Transaction> transactions, 
+        IReadOnlyList<Transaction> transactions, 
         int difficult, long nonce)
     {
         PreviousHash = previousHash;
@@ -37,7 +35,7 @@ public class Block
 
     public long Timestamp { get; }
     
-    public Transaction[] Transactions { get; }
+    public IReadOnlyList<Transaction> Transactions { get; }
     
     public int Difficult { get; }
     

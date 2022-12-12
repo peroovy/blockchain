@@ -21,5 +21,5 @@ public class Output
     
     public string ScriptPublicKey { get; }
 
-    public bool BelongTo(string data) => ScriptPublicKey == data;
+    public bool CanBeUnlockedWith(string data) => ScriptPublicKey == data;
 }

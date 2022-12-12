@@ -24,5 +24,5 @@ public class Input
     
     public string ScriptSignature { get; }
 
-    public bool BelongTo(string data) => ScriptSignature == data;
+    public bool CanUnlockOutputWith(string data) => ScriptSignature == data;
 }

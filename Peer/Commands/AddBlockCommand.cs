@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Immutable;
+using System.Collections.Generic;
 using Core;
 using Core.Transactions;
 
@@ -8,20 +8,19 @@ namespace Peer.Commands;
 public class AddBlockCommand : ICommand
 {
     private readonly BlockChain blockChain;
-    private readonly string address;
-    private readonly int subsidy;
+    private readonly List<Transaction> transactions;
 
-    public AddBlockCommand(BlockChain blockChain, string address, int subsidy)
+    public AddBlockCommand(BlockChain blockChain, List<Transaction> transactions)
     {
         this.blockChain = blockChain;
-        this.address = address;
-        this.subsidy = subsidy;
+        this.transactions = transactions;
     }
     
     public void Execute()
     {
-        blockChain.AddBlock(ImmutableArray.Create(Transaction.CreateCoinbase(address, subsidy)));
-        
+        blockChain.AddBlock(transactions);
+        transactions.Clear();
+
         Console.WriteLine("Success!");
     }
 }
