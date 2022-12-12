@@ -42,7 +42,7 @@ public class BlocksRepository : IBlocksRepository
     {
         return blocks
             .FindAll()
-            .OrderByDescending(block => block.Timestamp)
+            .OrderBy(block => block.Timestamp)
             .Select(block => Deserialize(block.Data));
     }
 

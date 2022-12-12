@@ -60,6 +60,10 @@
         <Reference Include="System.Xml" />
     </ItemGroup>
     <ItemGroup>
+        <Compile Include="Commands\AddBlockCommand.cs" />
+        <Compile Include="Commands\GetBalanceCommand.cs" />
+        <Compile Include="Commands\ICommand.cs" />
+        <Compile Include="Commands\PrintBlockChainCommand.cs" />
         <Compile Include="Program.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
     </ItemGroup>

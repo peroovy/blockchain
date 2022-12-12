@@ -52,7 +52,9 @@ public class BlockChain : IEnumerable<Block>
         var unspentOutputs = ImmutableArray.CreateBuilder<Output>();
         var spentOutputs = new Dictionary<string, HashSet<int>>();
 
-        foreach (var block in blocksRepository.GetAll())
+        foreach (var block in blocksRepository
+                     .GetAll()
+                     .Reverse())
         {
             foreach (var transaction in block.Transactions)
             {
