@@ -17,25 +17,57 @@ public class BlockChain
     private const int StartSubsidy = 100;
     private const int Difficult = 3;
 
-    public BlockChain()
+    public BlockChain(string address)
     {
         var genesis = MineBlock(Hashing.ZeroHash,
-            ImmutableArray.Create(Transaction.CreateCoinbase("Anybody", StartSubsidy)), Difficult);
+            ImmutableArray.Create(Transaction.CreateCoinbase(address, StartSubsidy)), Difficult);
         blocks.Add(genesis);
     }
 
     public IEnumerable<Block> Blocks => blocks.AsReadOnly();
 
-    public void AddBlock(string address, int amount)
+    public void AddBlock(ImmutableArray<Transaction> transactions)
     {
-        var previousHash = blocks.Last().Hash;
-        var transactions = ImmutableArray.Create(Transaction.CreateCoinbase(address, amount));
-
-        var block = MineBlock(previousHash, transactions, Difficult);
+        var block = MineBlock(blocks.Last().Hash, transactions, Difficult);
 
         blocks.Add(block);
     }
-    
+
+    public int GetBalance(string address)
+    {
+        return FindAllUtxo(address)
+            .Select(utxo => utxo.Value)
+            .Sum();
+    }
+
+    private ImmutableArray<Output> FindAllUtxo(string address)
+    {
+        var unspentOutputs = ImmutableArray.CreateBuilder<Output>();
+        var spentOutputs = new Dictionary<string, HashSet<int>>();
+
+        foreach (var block in blocks.AsEnumerable().Reverse())
+        {
+            foreach (var transaction in block.Transactions)
+            {
+                if (!spentOutputs.TryGetValue(transaction.Hash, out var spentIndices))
+                    spentIndices = spentOutputs[transaction.Hash] = new HashSet<int>();
+
+                var utxos = transaction.Outputs
+                    .Where((output, i) => !spentIndices.Contains(i) && output.BelongTo(address));
+                
+                unspentOutputs.AddRange(utxos);
+                
+                if (transaction.IsCoinbase)
+                    break;
+                
+                foreach (var input in transaction.Inputs.Where(input => input.BelongTo(address)))
+                    spentIndices.Add(input.OutputIndex);
+            }
+        }
+
+        return unspentOutputs.ToImmutable();
+    }
+
     private static Block MineBlock(string previousHash, ImmutableArray<Transaction> transactions, int difficult)
     {
         var timestamp = DateTimeOffset.Now.ToUnixTimeSeconds();

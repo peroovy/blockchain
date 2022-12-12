@@ -16,9 +16,14 @@ public class Block
         Timestamp = timestamp;
         Difficult = difficult;
         Nonce = nonce;
-        TransactionsTree = MerkleTree.Create(transactions.Select(transaction => transaction.Hash));
+        Transactions = transactions;
+        
+        var merkleHash = MerkleTree
+            .Create(transactions.Select(transaction => transaction.Hash))
+            .Hash;
+        
         Hash = Hashing
-            .SumSHA256(PreviousHash, Timestamp.ToString(), Difficult.ToString(), Nonce.ToString(), TransactionsTree.Hash)
+            .SumSHA256(PreviousHash, Timestamp.ToString(), Difficult.ToString(), Nonce.ToString(), merkleHash)
             .ToHexDigest();
     }
     
@@ -28,7 +33,7 @@ public class Block
 
     public long Timestamp { get; }
     
-    public MerkleTree TransactionsTree { get; }
+    public ImmutableArray<Transaction> Transactions { get; }
     
     public int Difficult { get; }
     

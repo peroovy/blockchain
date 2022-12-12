@@ -18,4 +18,6 @@ public class Output
     public int Value { get; }
     
     public string ScriptPublicKey { get; }
+
+    public bool BelongTo(string data) => ScriptPublicKey == data;
 }

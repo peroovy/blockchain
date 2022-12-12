@@ -21,4 +21,6 @@ public class Input
     public int OutputIndex { get; }
     
     public string ScriptSignature { get; }
+
+    public bool BelongTo(string data) => ScriptSignature == data;
 }

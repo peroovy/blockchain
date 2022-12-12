@@ -6,11 +6,12 @@ namespace Core.Transactions;
 
 public class Transaction
 {
-    public Transaction(ImmutableArray<Input> inputs, ImmutableArray<Output> outputs)
+    public Transaction(ImmutableArray<Input> inputs, ImmutableArray<Output> outputs, bool isCoinbase = false)
     {
         Inputs = inputs;
         Outputs = outputs;
-        
+        IsCoinbase = isCoinbase;
+
         var inputSumHash = string.Concat(inputs.Select(input => input.Hash));
         var outputSumHash = string.Concat(outputs.Select(output => output.Hash));
         Hash = Hashing
@@ -23,12 +24,15 @@ public class Transaction
     public ImmutableArray<Input> Inputs { get; }
     
     public ImmutableArray<Output> Outputs { get; }
+    
+    public bool IsCoinbase { get; }
 
     public static Transaction CreateCoinbase(string address, int subsidy)
     {
         return new Transaction(
             ImmutableArray.Create(new Input(Hashing.ZeroHash, -1, $"Reward to {address}: {subsidy}")),
-            ImmutableArray.Create(new Output(subsidy, address))
+            ImmutableArray.Create(new Output(subsidy, address)),
+            isCoinbase: true
         );
     }
 }
