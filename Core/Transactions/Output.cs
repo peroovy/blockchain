@@ -1,7 +1,9 @@
-﻿using Core.Utils;
+﻿using System;
+using Core.Utils;
 
 namespace Core.Transactions;
 
+[Serializable]
 public class Output
 {
     public Output(int value, string scriptPublicKey)

@@ -1,10 +1,14 @@
-﻿using System.Collections.Immutable;
+﻿using System;
+using System.Collections.Immutable;
+using System.IO;
 using System.Linq;
+using System.Runtime.Serialization.Formatters.Binary;
 using Core.Transactions;
 using Core.Utils;
 
 namespace Core;
 
+[Serializable]
 public class Block
 {
     public Block(
@@ -16,7 +20,7 @@ public class Block
         Timestamp = timestamp;
         Difficult = difficult;
         Nonce = nonce;
-        Transactions = transactions;
+        Transactions = transactions.ToArray();
         
         var merkleHash = MerkleTree
             .Create(transactions.Select(transaction => transaction.Hash))
@@ -33,7 +37,7 @@ public class Block
 
     public long Timestamp { get; }
     
-    public ImmutableArray<Transaction> Transactions { get; }
+    public Transaction[] Transactions { get; }
     
     public int Difficult { get; }
     

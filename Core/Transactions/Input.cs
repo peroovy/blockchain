@@ -1,7 +1,9 @@
-﻿using Core.Utils;
+﻿using System;
+using Core.Utils;
 
 namespace Core.Transactions;
 
+[Serializable]
 public class Input
 {
     public Input(string previousTransactionHash, int outputIndex, string scriptSignature)

@@ -2,35 +2,38 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Threading;
+using Core.Repositories;
 using Core.Transactions;
 using Core.Utils;
 
 namespace Core;
 
-public class BlockChain
+public class BlockChain : IEnumerable<Block>
 {
-    private readonly List<Block> blocks = new();
-
+    private readonly IBlocksRepository blocksRepository;
+    
     private const int StartSubsidy = 100;
     private const int Difficult = 3;
 
-    public BlockChain(string address)
+    public BlockChain(IBlocksRepository blocksRepository, string address)
     {
+        this.blocksRepository = blocksRepository;
+        
+        if (blocksRepository.ExistsAny())
+            return;
+        
         var genesis = MineBlock(Hashing.ZeroHash,
             ImmutableArray.Create(Transaction.CreateCoinbase(address, StartSubsidy)), Difficult);
-        blocks.Add(genesis);
-    }
 
-    public IEnumerable<Block> Blocks => blocks.AsReadOnly();
+        blocksRepository.Add(genesis);
+    }
 
     public void AddBlock(ImmutableArray<Transaction> transactions)
     {
-        var block = MineBlock(blocks.Last().Hash, transactions, Difficult);
+        var block = MineBlock(blocksRepository.Last().Hash, transactions, Difficult);
 
-        blocks.Add(block);
+        blocksRepository.Add(block);
     }
 
     public int GetBalance(string address)
@@ -40,12 +43,16 @@ public class BlockChain
             .Sum();
     }
 
+    public IEnumerator<Block> GetEnumerator() => blocksRepository.GetAll().GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
     private ImmutableArray<Output> FindAllUtxo(string address)
     {
         var unspentOutputs = ImmutableArray.CreateBuilder<Output>();
         var spentOutputs = new Dictionary<string, HashSet<int>>();
 
-        foreach (var block in blocks.AsEnumerable().Reverse())
+        foreach (var block in blocksRepository.GetAll())
         {
             foreach (var transaction in block.Transactions)
             {

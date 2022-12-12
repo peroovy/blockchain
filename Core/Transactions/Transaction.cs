@@ -1,15 +1,17 @@
-﻿using System.Collections.Immutable;
+﻿using System;
+using System.Collections.Immutable;
 using System.Linq;
 using Core.Utils;
 
 namespace Core.Transactions;
 
+[Serializable]
 public class Transaction
 {
     public Transaction(ImmutableArray<Input> inputs, ImmutableArray<Output> outputs, bool isCoinbase = false)
     {
-        Inputs = inputs;
-        Outputs = outputs;
+        Inputs = inputs.ToArray();
+        Outputs = outputs.ToArray();
         IsCoinbase = isCoinbase;
 
         var inputSumHash = string.Concat(inputs.Select(input => input.Hash));
@@ -21,9 +23,9 @@ public class Transaction
     
     public string Hash { get; }
     
-    public ImmutableArray<Input> Inputs { get; }
+    public Input[] Inputs { get; }
     
-    public ImmutableArray<Output> Outputs { get; }
+    public Output[] Outputs { get; }
     
     public bool IsCoinbase { get; }
 
