@@ -12,7 +12,7 @@ public class BlockChain : IEnumerable<Block>
 {
     private readonly IBlocksRepository blocksRepository;
     
-    private const int Subsidy = 100;
+    private const int Subsidy = 60;
     private const int Difficult = 3;
 
     public BlockChain(IBlocksRepository blocksRepository, Wallet peer)
@@ -29,9 +29,11 @@ public class BlockChain : IEnumerable<Block>
         blocksRepository.Add(genesis);
     }
 
-    public void AddBlock(IReadOnlyList<Transaction> transactions)
+    public void AddBlock(Wallet wallet, IReadOnlyList<Transaction> transactions)
     {
-        var block = MineBlock(blocksRepository.Last().Hash, transactions, Difficult);
+        var block = MineBlock(blocksRepository.Last().Hash, 
+            transactions.Prepend(Transaction.CreateCoinbase(wallet, Subsidy)).ToArray(), 
+            Difficult);
 
         blocksRepository.Add(block);
     }
@@ -56,7 +58,7 @@ public class BlockChain : IEnumerable<Block>
             
             accumulated += utxo.Output.Value;
 
-            if (accumulated > amount)
+            if (accumulated >= amount)
                 break;
         }
 
@@ -99,7 +101,7 @@ public class BlockChain : IEnumerable<Block>
                 unspentOutputs.AddRange(utxos);
                 
                 if (transaction.IsCoinbase)
-                    break;
+                    continue;
 
                 foreach (var input in transaction.Inputs.Where(input => input.BelongsTo(publicKeyHash)))
                 {
@@ -114,7 +116,7 @@ public class BlockChain : IEnumerable<Block>
         return unspentOutputs.AsReadOnly();
     }
 
-    private static Block MineBlock(string previousHash, IReadOnlyList<Transaction> transactions, int difficult)
+    private static Block MineBlock(string previousBlockHash, IReadOnlyList<Transaction> transactions, int difficult)
     {
         var timestamp = DateTimeOffset.Now.ToUnixTimeSeconds();
 
@@ -123,7 +125,7 @@ public class BlockChain : IEnumerable<Block>
 
         for (var nonce = 0L; nonce < long.MaxValue; nonce++)
         {
-            var block = new Block(previousHash, timestamp, transactions, difficult, nonce);
+            var block = new Block(previousBlockHash, timestamp, transactions, difficult, nonce);
 
             if (ValidateBlock(block, difficult))
                 return block;

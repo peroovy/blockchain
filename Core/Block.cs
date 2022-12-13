@@ -10,11 +10,11 @@ namespace Core;
 public class Block
 {
     public Block(
-        string previousHash, long timestamp, 
+        string previousBlockHash, long timestamp, 
         IReadOnlyList<Transaction> transactions, 
         int difficult, long nonce)
     {
-        PreviousHash = previousHash;
+        PreviousBlockHash = previousBlockHash;
         Timestamp = timestamp;
         Difficult = difficult;
         Nonce = nonce;
@@ -25,11 +25,11 @@ public class Block
             .Hash;
         
         Hash = Hashing
-            .SumSha256(PreviousHash, Timestamp.ToString(), Difficult.ToString(), Nonce.ToString(), merkleHash)
+            .SumSha256(PreviousBlockHash, Timestamp.ToString(), Difficult.ToString(), Nonce.ToString(), merkleHash)
             .ToHexDigest();
     }
     
-    public string PreviousHash { get; }
+    public string PreviousBlockHash { get; }
     
     public string Hash { get; }
 

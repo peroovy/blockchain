@@ -35,11 +35,15 @@ public class SendCurrencyCommand : ICommand
         try
         {
             var transaction = blockChain.CreateTransaction(wallet, receiverAddress, amount);
-            transactions.Add(transaction);
+            blockChain.AddBlock(wallet, new[] { transaction });
         }
         catch (NotEnoughCurrencyException)
         {
             Console.WriteLine("ERROR: Not enough currency");
+        }
+        catch (InvalidTransactionSignatureException)
+        {
+            Console.WriteLine("ERROR: Invalid transaction signature");
         }
     }
 }

@@ -16,7 +16,7 @@ public class PrintBlockChainCommand : ICommand
     {
         foreach (var block in blockChain)
         {
-            Console.WriteLine($"Previous Hash: {block.PreviousHash}");
+            Console.WriteLine($"Previous Hash: {block.PreviousBlockHash}");
             Console.WriteLine($"Hash: {block.Hash}");
             Console.WriteLine($"Timestamp: {block.Timestamp}");
             Console.WriteLine($"Nonce: {block.Nonce}");

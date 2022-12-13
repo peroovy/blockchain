@@ -29,7 +29,6 @@ internal static class Program
         var commands = new Dictionary<string, ICommand>
         {
             ["blocks"] = new PrintBlockChainCommand(blockChain),
-            ["mine"] = new AddBlockCommand(blockChain, transactions),
             ["balance"] = new GetBalanceCommand(wallet, blockChain),
             ["send"] = new SendCurrencyCommand(wallet, blockChain, transactions)
         };

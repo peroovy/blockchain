@@ -60,7 +60,6 @@
         <Reference Include="System.Xml" />
     </ItemGroup>
     <ItemGroup>
-        <Compile Include="Commands\AddBlockCommand.cs" />
         <Compile Include="Commands\SendCurrencyCommand.cs" />
         <Compile Include="Commands\GetBalanceCommand.cs" />
         <Compile Include="Commands\ICommand.cs" />
