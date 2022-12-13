@@ -67,6 +67,7 @@
     <ItemGroup>
         <Compile Include="Block.cs" />
         <Compile Include="BlockChain.cs" />
+        <Compile Include="InvalidTransactionSignatureException.cs" />
         <Compile Include="NotEnoughCurrencyException.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
         <Compile Include="Repositories\SerializedBlock.cs" />

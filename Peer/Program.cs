@@ -4,6 +4,7 @@ using System.IO;
 using Core;
 using Core.Repositories.LiteDB;
 using Core.Transactions;
+using Core.Utils;
 using LiteDB;
 using Peer.Commands;
 
@@ -50,10 +51,26 @@ internal static class Program
     
     private static Wallet LoadWallet()
     {
-        var sshFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ssh");
+        using var privateFile = File.Open(PrivateKeyPath, FileMode.OpenOrCreate, FileAccess.ReadWrite);
+        using var privateFileReader = new StreamReader(privateFile);
+        using var privateFileWriter = new StreamWriter(privateFile);
         
-        var privateKey = File.ReadAllText(Path.Combine(sshFolder, PrivateKeyPath));
-        var publicKey = File.ReadAllText(Path.Combine(sshFolder, PublicKeyPath));
+        using var publicFile = File.Open(PublicKeyPath, FileMode.OpenOrCreate, FileAccess.ReadWrite);
+        using var publicFileReader = new StreamReader(publicFile);
+        using var publicFileWriter = new StreamWriter(publicFile);
+
+        if (privateFile.Length == 0 || publicFile.Length == 0)
+        {
+            var keys = RsaUtils.GenerateRsaPair();
+
+            privateFileWriter.Write(keys.privateKey);
+            publicFileWriter.Write(keys.publicKey);
+            
+            return new Wallet(keys.privateKey, keys.publicKey);
+        }
+
+        var privateKey = privateFileReader.ReadToEnd();
+        var publicKey = publicFileReader.ReadToEnd();
 
         return new Wallet(privateKey, publicKey);
     }

@@ -51,7 +51,7 @@ public class BlockChain : IEnumerable<Block>
         var accumulated = 0;
         foreach (var utxo in utxos.OrderBy(utxo => utxo.Output.Value))
         {
-            var input = new Input(utxo.TransactionHash, utxo.OutputIndex, null, sender.PublicKey);
+            var input = new Input(utxo.TransactionHash, utxo.OutputIndex, sender.PublicKey);
             inputs.Add(input);
             
             accumulated += utxo.Output.Value;
@@ -67,7 +67,13 @@ public class BlockChain : IEnumerable<Block>
         if (accumulated > amount)
             outputs.Add(new Output(accumulated - amount, sender.PublicKeyHash));
 
-        return new Transaction(inputs, outputs);
+        var transaction = new Transaction(inputs, outputs);
+        var signature = RsaUtils.SignData(sender.PrivateKey, transaction.Hash);
+
+        foreach (var input in inputs)
+            input.Signature = signature;
+
+        return transaction;
     }
     
     public IEnumerator<Block> GetEnumerator() => blocksRepository.GetAll().GetEnumerator();
@@ -111,6 +117,9 @@ public class BlockChain : IEnumerable<Block>
     private static Block MineBlock(string previousHash, IReadOnlyList<Transaction> transactions, int difficult)
     {
         var timestamp = DateTimeOffset.Now.ToUnixTimeSeconds();
+
+        if (transactions.Any(transaction => !transaction.IsCoinbase && !transaction.VerifySignature()))
+            throw new InvalidTransactionSignatureException();
 
         for (var nonce = 0L; nonce < long.MaxValue; nonce++)
         {
