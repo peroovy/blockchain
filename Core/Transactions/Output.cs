@@ -6,12 +6,12 @@ namespace Core.Transactions;
 [Serializable]
 public class Output
 {
-    public Output(int value, string scriptPublicKey)
+    public Output(int value, string publicKeyHash)
     {
         Value = value;
-        ScriptPublicKey = scriptPublicKey;
+        PublicKeyHash = publicKeyHash;
         Hash = Hashing
-            .SumSHA256(value.ToString(), scriptPublicKey)
+            .SumSha256(Value.ToString(), PublicKeyHash)
             .ToHexDigest();
     }
     
@@ -19,7 +19,7 @@ public class Output
     
     public int Value { get; }
     
-    public string ScriptPublicKey { get; }
+    public string PublicKeyHash { get; }
 
-    public bool CanBeUnlockedWith(string data) => ScriptPublicKey == data;
+    public bool IsLockedFor(string publicKeyHash) => PublicKeyHash == publicKeyHash;
 }

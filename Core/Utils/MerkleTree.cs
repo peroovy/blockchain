@@ -21,7 +21,7 @@ public class MerkleTree
     public static MerkleTree Create(IEnumerable<string> values)
     {
         var nodes = values
-            .Select(value => new MerkleTree(Hashing.SumSHA256(value).ToHexDigest()))
+            .Select(value => new MerkleTree(Hashing.SumSha256(value).ToHexDigest()))
             .ToList();
 
         while (nodes.Count > 1)
@@ -34,7 +34,7 @@ public class MerkleTree
                 var rightNode = i + 1 < nodes.Count ? nodes[i + 1] : leftNode;
 
                 var hash = Hashing
-                    .SumSHA256(leftNode.Hash, rightNode.Hash)
+                    .SumSha256(leftNode.Hash, rightNode.Hash)
                     .ToHexDigest();
 
                 var node = new MerkleTree(hash, leftNode, rightNode);

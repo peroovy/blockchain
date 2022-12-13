@@ -6,13 +6,14 @@ namespace Core.Transactions;
 [Serializable]
 public class Input
 {
-    public Input(string previousTransactionHash, int outputIndex, string scriptSignature)
+    public Input(string previousTransactionHash, int outputIndex, string signature, string publicKey)
     {
         PreviousTransactionHash = previousTransactionHash;
         OutputIndex = outputIndex;
-        ScriptSignature = scriptSignature;
+        Signature = signature;
+        PublicKey = publicKey;
         Hash = Hashing
-            .SumSHA256(PreviousTransactionHash, OutputIndex.ToString(), ScriptSignature)
+            .SumSha256(PreviousTransactionHash, OutputIndex.ToString(), Signature, PublicKey)
             .ToHexDigest();
     }
     
@@ -22,7 +23,9 @@ public class Input
     
     public int OutputIndex { get; }
     
-    public string ScriptSignature { get; }
+    public string Signature { get; }
+    
+    public string PublicKey { get; }
 
-    public bool CanUnlockOutputWith(string data) => ScriptSignature == data;
+    public bool BelongsTo(string publicKeyHash) => RsaUtils.HashPublicKey(PublicKey).ToHexDigest() == publicKeyHash;
 }

@@ -25,7 +25,7 @@ public class Block
             .Hash;
         
         Hash = Hashing
-            .SumSHA256(PreviousHash, Timestamp.ToString(), Difficult.ToString(), Nonce.ToString(), merkleHash)
+            .SumSha256(PreviousHash, Timestamp.ToString(), Difficult.ToString(), Nonce.ToString(), merkleHash)
             .ToHexDigest();
     }
     

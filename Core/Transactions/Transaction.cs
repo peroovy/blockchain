@@ -17,7 +17,7 @@ public class Transaction
         var inputSumHash = string.Concat(inputs.Select(input => input.Hash));
         var outputSumHash = string.Concat(outputs.Select(output => output.Hash));
         Hash = Hashing
-            .SumSHA256(inputSumHash, outputSumHash)
+            .SumSha256(inputSumHash, outputSumHash)
             .ToHexDigest();
     }
     
@@ -29,11 +29,11 @@ public class Transaction
     
     public bool IsCoinbase { get; }
 
-    public static Transaction CreateCoinbase(string address, int subsidy)
+    public static Transaction CreateCoinbase(Wallet wallet, int subsidy)
     {
         return new Transaction(
-            new List<Input> { new(Hashing.ZeroHash, -1, $"Reward to {address}: {subsidy}") },
-            new List<Output> { new(subsidy, address) },
+            new List<Input> { new(Hashing.ZeroHash, -1, null, $"Reward to {wallet.Address}: {subsidy}") },
+            new List<Output> { new(subsidy, wallet.PublicKeyHash) },
             isCoinbase: true
         );
     }

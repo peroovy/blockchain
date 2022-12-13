@@ -15,7 +15,7 @@ public class BlockChain : IEnumerable<Block>
     private const int Subsidy = 100;
     private const int Difficult = 3;
 
-    public BlockChain(IBlocksRepository blocksRepository, string address)
+    public BlockChain(IBlocksRepository blocksRepository, Wallet peer)
     {
         this.blocksRepository = blocksRepository;
         
@@ -23,9 +23,9 @@ public class BlockChain : IEnumerable<Block>
             return;
 
         var genesis = MineBlock(Hashing.ZeroHash,
-            new[] { Transaction.CreateCoinbase(address, Subsidy) },
+            new[] { Transaction.CreateCoinbase(peer, Subsidy) },
             Difficult);
-
+        
         blocksRepository.Add(genesis);
     }
 
@@ -36,22 +36,22 @@ public class BlockChain : IEnumerable<Block>
         blocksRepository.Add(block);
     }
 
-    public int GetBalance(string address)
+    public int GetBalance(string publicKeyHash)
     {
-        return FindUtxos(address)
+        return FindUtxos(publicKeyHash)
             .Select(utxo => utxo.Output.Value)
             .Sum();
     }
     
-    public Transaction CreateTransaction(string senderAddress, string receiverAddress, int amount)
+    public Transaction CreateTransaction(Wallet sender, string receiverAddress, int amount)
     {
-        var utxos = FindUtxos(senderAddress);
+        var utxos = FindUtxos(sender.PublicKeyHash);
 
         var inputs = new List<Input>();
         var accumulated = 0;
         foreach (var utxo in utxos.OrderBy(utxo => utxo.Output.Value))
         {
-            var input = new Input(utxo.TransactionHash, utxo.OutputIndex, senderAddress);
+            var input = new Input(utxo.TransactionHash, utxo.OutputIndex, null, sender.PublicKey);
             inputs.Add(input);
             
             accumulated += utxo.Output.Value;
@@ -63,16 +63,16 @@ public class BlockChain : IEnumerable<Block>
         if (accumulated < amount)
             throw new NotEnoughCurrencyException();
 
-        var outputs = new List<Output> { new(amount, receiverAddress) };
+        var outputs = new List<Output> { new(amount, RsaUtils.GetPublicKeyHashFromAddress(receiverAddress)) };
         if (accumulated > amount)
-            outputs.Add(new Output(accumulated - amount, senderAddress));
+            outputs.Add(new Output(accumulated - amount, sender.PublicKeyHash));
 
         return new Transaction(inputs, outputs);
     }
     
     public IEnumerator<Block> GetEnumerator() => blocksRepository.GetAll().GetEnumerator();
 
-    private IReadOnlyList<Utxo> FindUtxos(string address)
+    private IReadOnlyList<Utxo> FindUtxos(string publicKeyHash)
     {
         var unspentOutputs = new List<Utxo>();
         var spentOutputs = new Dictionary<string, HashSet<int>>();
@@ -88,14 +88,14 @@ public class BlockChain : IEnumerable<Block>
 
                 var utxos = transaction.Outputs
                     .Select((output, i) => new Utxo(transaction.Hash, i, output))
-                    .Where(utxo => !spentIndices.Contains(utxo.OutputIndex) && utxo.Output.CanBeUnlockedWith(address));
+                    .Where(utxo => !spentIndices.Contains(utxo.OutputIndex) && utxo.Output.IsLockedFor(publicKeyHash));
                 
                 unspentOutputs.AddRange(utxos);
                 
                 if (transaction.IsCoinbase)
                     break;
 
-                foreach (var input in transaction.Inputs.Where(input => input.CanUnlockOutputWith(address)))
+                foreach (var input in transaction.Inputs.Where(input => input.BelongsTo(publicKeyHash)))
                 {
                     if (!spentOutputs.ContainsKey(input.PreviousTransactionHash))
                         spentOutputs.Add(input.PreviousTransactionHash, new HashSet<int>());
