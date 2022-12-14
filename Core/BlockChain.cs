@@ -8,50 +8,62 @@ using Core.Utils;
 
 namespace Core;
 
-public class BlockChain : IEnumerable<Block>
+public class BlockChain
 {
     private readonly IBlocksRepository blocksRepository;
-    
+    private readonly IUtxosRepository utxosRepository;
+
     private const int Subsidy = 60;
     private const int Difficult = 3;
 
-    public BlockChain(IBlocksRepository blocksRepository, Wallet peer)
+    public BlockChain(Wallet peerWallet, IBlocksRepository blocksRepository, IUtxosRepository utxosRepository)
     {
         this.blocksRepository = blocksRepository;
-        
+        this.utxosRepository = utxosRepository;
+
         if (blocksRepository.ExistsAny())
             return;
 
-        var genesis = MineBlock(Hashing.ZeroHash,
-            new[] { Transaction.CreateCoinbase(peer, Subsidy) },
-            Difficult);
-        
-        blocksRepository.Add(genesis);
+        MineBlock(peerWallet, Enumerable.Empty<Transaction>(), isFirstBlock: true);
     }
 
-    public void AddBlock(Wallet wallet, IReadOnlyList<Transaction> transactions)
+    public Block MineBlock(Wallet wallet, IEnumerable<Transaction> transactions, bool isFirstBlock = false)
     {
-        var block = MineBlock(blocksRepository.Last().Hash, 
+        var block = MineBlock(isFirstBlock ? Hashing.ZeroHash : blocksRepository.Last().Hash, 
             transactions.Prepend(Transaction.CreateCoinbase(wallet, Subsidy)).ToArray(), 
             Difficult);
 
         blocksRepository.Add(block);
+
+        foreach (var input in block
+                     .Transactions
+                     .Where(transaction => !transaction.IsCoinbase)
+                     .SelectMany(transaction => transaction.Inputs))
+        {
+            utxosRepository.DeleteOne(input.PreviousTransactionHash, input.OutputIndex);
+        }
+
+        var utxos = block
+            .Transactions
+            .SelectMany(transaction => transaction.Outputs.Select((output, i) => new Utxo(transaction.Hash, i, output)));
+
+        utxosRepository.InsertBulk(utxos);
+
+        return block;
     }
 
     public int GetBalance(string publicKeyHash)
     {
-        return FindUtxos(publicKeyHash)
+        return FindLockedUtxosWith(publicKeyHash)
             .Select(utxo => utxo.Output.Value)
             .Sum();
     }
     
     public Transaction CreateTransaction(Wallet sender, string receiverAddress, int amount)
     {
-        var utxos = FindUtxos(sender.PublicKeyHash);
-
         var inputs = new List<Input>();
         var accumulated = 0;
-        foreach (var utxo in utxos.OrderBy(utxo => utxo.Output.Value))
+        foreach (var utxo in FindLockedUtxosWith(sender.PublicKeyHash).OrderBy(utxo => utxo.Output.Value))
         {
             var input = new Input(utxo.TransactionHash, utxo.OutputIndex, sender.PublicKey);
             inputs.Add(input);
@@ -78,42 +90,9 @@ public class BlockChain : IEnumerable<Block>
         return transaction;
     }
     
-    public IEnumerator<Block> GetEnumerator() => blocksRepository.GetAll().GetEnumerator();
-
-    private IReadOnlyList<Utxo> FindUtxos(string publicKeyHash)
+    private IEnumerable<Utxo> FindLockedUtxosWith(string publicKeyHash)
     {
-        var unspentOutputs = new List<Utxo>();
-        var spentOutputs = new Dictionary<string, HashSet<int>>();
-
-        foreach (var block in blocksRepository
-                     .GetAll()
-                     .Reverse())
-        {
-            foreach (var transaction in block.Transactions)
-            {
-                if (!spentOutputs.TryGetValue(transaction.Hash, out var spentIndices))
-                    spentIndices = spentOutputs[transaction.Hash] = new HashSet<int>();
-
-                var utxos = transaction.Outputs
-                    .Select((output, i) => new Utxo(transaction.Hash, i, output))
-                    .Where(utxo => !spentIndices.Contains(utxo.OutputIndex) && utxo.Output.IsLockedFor(publicKeyHash));
-                
-                unspentOutputs.AddRange(utxos);
-                
-                if (transaction.IsCoinbase)
-                    continue;
-
-                foreach (var input in transaction.Inputs.Where(input => input.BelongsTo(publicKeyHash)))
-                {
-                    if (!spentOutputs.ContainsKey(input.PreviousTransactionHash))
-                        spentOutputs.Add(input.PreviousTransactionHash, new HashSet<int>());
-                    
-                    spentOutputs[input.PreviousTransactionHash].Add(input.OutputIndex);
-                }
-            }
-        }
-
-        return unspentOutputs.AsReadOnly();
+        return utxosRepository.Filter(utxo => utxo.Output.IsLockedWith(publicKeyHash));
     }
 
     private static Block MineBlock(string previousBlockHash, IReadOnlyList<Transaction> transactions, int difficult)
@@ -121,7 +100,7 @@ public class BlockChain : IEnumerable<Block>
         var timestamp = DateTimeOffset.Now.ToUnixTimeSeconds();
 
         if (transactions.Any(transaction => !transaction.IsCoinbase && !transaction.VerifySignature()))
-            throw new InvalidTransactionSignatureException();
+            throw new InvalidTransactionException();
 
         for (var nonce = 0L; nonce < long.MaxValue; nonce++)
         {
@@ -141,6 +120,4 @@ public class BlockChain : IEnumerable<Block>
             .Take(expectedDifficult)
             .All(bit => !bit);
     }
-    
-    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

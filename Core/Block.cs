@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Runtime.Serialization.Formatters.Binary;
 using Core.Transactions;
 using Core.Utils;
 
@@ -18,10 +20,10 @@ public class Block
         Timestamp = timestamp;
         Difficult = difficult;
         Nonce = nonce;
-        Transactions = transactions.ToArray();
+        Transactions = transactions;
         
         var merkleHash = MerkleTree
-            .Create(transactions.Select(transaction => transaction.Hash))
+            .Create(Transactions.Select(transaction => transaction.Hash))
             .Hash;
         
         Hash = Hashing

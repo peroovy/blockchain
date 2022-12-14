@@ -23,12 +23,13 @@ internal static class Program
         var wallet = LoadWallet();
         
         var blocksRepository = new BlocksRepository(database);
-        var blockChain = new BlockChain(blocksRepository, wallet);
+        var utxosRepository = new UtxosRepository(database);
+        
+        var blockChain = new BlockChain(wallet, blocksRepository, utxosRepository);
         var transactions = new List<Transaction>();
         
         var commands = new Dictionary<string, ICommand>
         {
-            ["blocks"] = new PrintBlockChainCommand(blockChain),
             ["balance"] = new GetBalanceCommand(wallet, blockChain),
             ["send"] = new SendCurrencyCommand(wallet, blockChain, transactions)
         };

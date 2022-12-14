@@ -1,7 +1,9 @@
-﻿using Core.Transactions;
+﻿using System;
+using Core.Transactions;
 
 namespace Core;
 
+[Serializable]
 public class Utxo
 {
     public Utxo(string transactionHash, int outputIndex, Output output)

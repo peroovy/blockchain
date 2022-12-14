@@ -67,10 +67,13 @@
     <ItemGroup>
         <Compile Include="Block.cs" />
         <Compile Include="BlockChain.cs" />
-        <Compile Include="InvalidTransactionSignatureException.cs" />
+        <Compile Include="InvalidTransactionException.cs" />
         <Compile Include="NotEnoughCurrencyException.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
-        <Compile Include="Repositories\SerializedBlock.cs" />
+        <Compile Include="Repositories\IUtxosRepository.cs" />
+        <Compile Include="Repositories\LiteDb\SerializedBlock.cs" />
+        <Compile Include="Repositories\LiteDb\SerializedUtxo.cs" />
+        <Compile Include="Repositories\LiteDb\UtxosRepository.cs" />
         <Compile Include="Repositories\IBlocksRepository.cs" />
         <Compile Include="Repositories\LiteDb\BlocksRepository.cs" />
         <Compile Include="Transactions\Transaction.cs" />
@@ -79,6 +82,7 @@
         <Compile Include="Utils\Hashing.cs" />
         <Compile Include="Utils\MerkleTree.cs" />
         <Compile Include="Utils\RsaUtils.cs" />
+        <Compile Include="Utils\Serializer.cs" />
         <Compile Include="Utxo.cs" />
         <Compile Include="Wallet.cs" />
     </ItemGroup>

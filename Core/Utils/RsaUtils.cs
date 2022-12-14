@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Policy;
@@ -41,14 +42,21 @@ public static class RsaUtils
 
     public static bool ValidateAddress(string address)
     {
-        var payload = Base58CheckEncoding.DecodePlain(address);
-        var version = new[] { payload[0] };
-        var publicKeyHash = payload.Skip(1).Take(payload.Length - ChecksumLength - 1);
-        var checksum = payload.Reverse().Take(ChecksumLength).Reverse().ToArray();
+        try
+        {
+            var payload = Base58CheckEncoding.DecodePlain(address);
+            var version = new[] { payload[0] };
+            var publicKeyHash = payload.Skip(1).Take(payload.Length - ChecksumLength - 1);
+            var checksum = payload.Reverse().Take(ChecksumLength).Reverse().ToArray();
 
-        var expectedChecksum = CalculateChecksum(version.Concat(publicKeyHash).ToArray());
+            var expectedChecksum = CalculateChecksum(version.Concat(publicKeyHash).ToArray());
 
-        return checksum.SequenceEqual(expectedChecksum);
+            return checksum.SequenceEqual(expectedChecksum);
+        }
+        catch (Exception)
+        {
+            return false;
+        }
     }
 
     public static string GetPublicKeyHashFromAddress(string address)

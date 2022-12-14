@@ -35,13 +35,16 @@ public class SendCurrencyCommand : ICommand
         try
         {
             var transaction = blockChain.CreateTransaction(wallet, receiverAddress, amount);
-            blockChain.AddBlock(wallet, new[] { transaction });
+            var block = blockChain.MineBlock(wallet, new[] { transaction });
+            
+            Console.WriteLine($"Block: {block.Hash}");
+            Console.WriteLine($"Difficult: {block.Difficult}");
         }
         catch (NotEnoughCurrencyException)
         {
             Console.WriteLine("ERROR: Not enough currency");
         }
-        catch (InvalidTransactionSignatureException)
+        catch (InvalidTransactionException)
         {
             Console.WriteLine("ERROR: Invalid transaction signature");
         }

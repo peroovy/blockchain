@@ -21,5 +21,5 @@ public class Output
     
     public string PublicKeyHash { get; }
 
-    public bool IsLockedFor(string publicKeyHash) => PublicKeyHash == publicKeyHash;
+    public bool IsLockedWith(string publicKeyHash) => PublicKeyHash == publicKeyHash;
 }

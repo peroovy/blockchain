@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Runtime.Serialization.Formatters.Binary;
+using Core.Utils;
 using LiteDB;
 
 namespace Core.Repositories.LiteDB;
@@ -23,7 +22,7 @@ public class BlocksRepository : IBlocksRepository
         {
             Hash = block.Hash,
             Timestamp = block.Timestamp,
-            Data = Serialize(block)
+            Data = Serializer.ToBytes(block)
         };
 
         blocks.Insert(serialized);
@@ -35,7 +34,7 @@ public class BlocksRepository : IBlocksRepository
             .FindAll()
             .Last();
 
-        return Deserialize(serialized.Data);
+        return Serializer.FromBytes<Block>(serialized.Data);
     }
 
     public IEnumerable<Block> GetAll()
@@ -43,24 +42,6 @@ public class BlocksRepository : IBlocksRepository
         return blocks
             .FindAll()
             .OrderBy(block => block.Timestamp)
-            .Select(block => Deserialize(block.Data));
-    }
-
-    private static byte[] Serialize(Block block)
-    {
-        var formatter = new BinaryFormatter();
-        using var memoryStream = new MemoryStream();
-        
-        formatter.Serialize(memoryStream, block);
-
-        return memoryStream.GetBuffer();
-    }
-
-    private static Block Deserialize(byte[] bytes)
-    {
-        var formatter = new BinaryFormatter();
-        using var memoryStream = new MemoryStream(bytes);
-
-        return (Block)formatter.Deserialize(memoryStream);
+            .Select(block => Serializer.FromBytes<Block>(block.Data));
     }
 }
