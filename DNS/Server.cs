@@ -37,31 +37,16 @@ namespace DNS
             
             using var input = clientSocket.GetStream();
             using var output = clientSocket.GetStream();
-
-            Addresses[address] = DateTime.Now.Ticks;
             
-            RemoveExpiredAddresses();
+            var now = DateTime.Now.Ticks;
+            Addresses[address] = now;
             
             var addresses = Addresses
-                .Keys
-                .Where(point => point != address)
+                .Where(pair => pair.Key != address && pair.Value + Ttl > now)
                 .ToArray();
             var serializedAddresses = Serializer.ToBytes(addresses);
             
             output.Write(serializedAddresses, 0, serializedAddresses.Length);
-        }
-
-        private static void RemoveExpiredAddresses()
-        {
-            var now = DateTime.Now.Ticks;
-
-            foreach (var endPoint in Addresses
-                         .Where(pair => pair.Value + Ttl < now)
-                         .Select(pair => pair.Key)
-                         .ToArray())
-            {
-                Addresses.TryRemove(endPoint, out _);
-            }
         }
     }
 }
