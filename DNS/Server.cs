@@ -27,8 +27,6 @@ namespace DNS
                 var clientSocket = listener.AcceptTcpClient();
                 
                 Task.Run(() => HandleClient(clientSocket));
-                
-                RemoveExpiredAddresses();
             }
         }
 
@@ -41,7 +39,9 @@ namespace DNS
             using var output = clientSocket.GetStream();
 
             Addresses[address] = DateTime.Now.Ticks;
-
+            
+            RemoveExpiredAddresses();
+            
             var addresses = Addresses
                 .Keys
                 .Where(point => point != address)
