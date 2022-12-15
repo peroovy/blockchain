@@ -35,7 +35,6 @@ namespace DNS
             var address = clientSocket.Client.RemoteEndPoint;
             Logger.LogInformation($"Handle peer {address}");
             
-            using var input = clientSocket.GetStream();
             using var output = clientSocket.GetStream();
             
             var now = DateTime.Now.Ticks;
@@ -43,10 +42,13 @@ namespace DNS
             
             var addresses = Addresses
                 .Where(pair => pair.Key != address && pair.Value + Ttl > now)
+                .Select(pair => pair.Key)
                 .ToArray();
+            
             var serializedAddresses = Serializer.ToBytes(addresses);
             
             output.Write(serializedAddresses, 0, serializedAddresses.Length);
+            output.Flush();
         }
     }
 }
