@@ -6,49 +6,79 @@ using System.Net.Sockets;
 using System.Threading.Tasks;
 using Core.Utils;
 using Microsoft.Extensions.Logging;
+using System.Configuration;
+using Core;
+using Core.Network;
 
-namespace DNS
+namespace DNS;
+
+internal class Server
 {
-    internal class Server
+    private static readonly ConcurrentDictionary<EndPoint, long> Addresses = new();
+    private static readonly Logger<Server> Logger = new(LoggerFactory.Create(builder => builder.AddConsole()));
+
+    public static void Main(string[] args)
     {
-        private static readonly ConcurrentDictionary<EndPoint, long> Addresses = new();
-        private static readonly Logger<Server> Logger = new(LoggerFactory.Create(builder => builder.AddConsole()));
+        var port = Convert.ToInt32(ConfigurationManager.AppSettings["Port"]);
+        var listener = new TcpListener(IPAddress.Any, port);
 
-        private const long Ttl = TimeSpan.TicksPerMinute * 5;
+        listener.Start();
+        Logger.LogInformation($"Listen {listener.LocalEndpoint}");
 
-        public static void Main(string[] args)
+        while (true)
         {
-            var listener = new TcpListener(IPAddress.Any, 8000);
-            listener.Start();
-            Logger.LogInformation($"Start server on {listener.LocalEndpoint}");
+            var clientSocket = listener.AcceptTcpClient();
 
-            while (true)
-            {
-                var clientSocket = listener.AcceptTcpClient();
-                
-                Task.Run(() => HandleClient(clientSocket));
-            }
+            Task.Run(() => HandleClient(clientSocket));
         }
+    }
+    
+    private static void HandleClient(TcpClient client)
+    {
+        var address = client.Client.RemoteEndPoint;
 
-        private static void HandleClient(TcpClient clientSocket)
+        using var stream = client.GetStream();
+        var receiveData = new byte[client.ReceiveBufferSize];
+        stream.Read(receiveData, 0, receiveData.Length);
+        
+        var command = Serializer.FromBytes<DnsCommands>(receiveData);
+
+        switch (command)
         {
-            var address = clientSocket.Client.RemoteEndPoint;
-            Logger.LogInformation($"Handle peer {address}");
+            case DnsCommands.Connect:
+                HandleConnect(stream, address);
+                break;
             
-            using var output = clientSocket.GetStream();
+            case DnsCommands.Disconnect:
+                HandleDisconnect(address);
+                break;
             
-            var now = DateTime.Now.Ticks;
-            Addresses[address] = now;
-            
-            var addresses = Addresses
-                .Where(pair => pair.Key != address && pair.Value + Ttl > now)
-                .Select(pair => pair.Key)
-                .ToArray();
-            
-            var serializedAddresses = Serializer.ToBytes(addresses);
-            
-            output.Write(serializedAddresses, 0, serializedAddresses.Length);
-            output.Flush();
+            default:
+                throw new ArgumentOutOfRangeException($"Unknown command {command}");
         }
+    }
+
+    private static void HandleConnect(NetworkStream stream, EndPoint address)
+    {
+        Logger.LogInformation($"Connect node: {address}");
+
+        var now = DateTime.Now.Ticks;
+        Addresses[address] = now;
+            
+        var addresses = Addresses
+            .Where(pair => pair.Key != address)
+            .Select(pair => pair.Key)
+            .ToArray();
+            
+        var serializedAddresses = Serializer.ToBytes(addresses);
+
+        stream.Write(serializedAddresses, 0, serializedAddresses.Length);
+        stream.Flush();
+    }
+
+    private static void HandleDisconnect(EndPoint address)
+    {
+        if (Addresses.TryRemove(address, out _))
+            Logger.LogInformation($"Disconnect node {address}");
     }
 }
