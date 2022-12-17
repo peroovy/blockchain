@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using Core.Utils;
+﻿using System.Linq;
 using LiteDB;
 
 namespace Core.Repositories.LiteDB;
@@ -16,32 +14,21 @@ public class BlocksRepository : IBlocksRepository
 
     public bool ExistsAny() => blocks.FindAll().Any();
 
-    public void Add(Block block)
+    public void Insert(Block block)
     {
-        var serialized = new SerializedBlock
-        {
-            Hash = block.Hash,
-            Timestamp = block.Timestamp,
-            Data = Serializer.ToBytes(block)
-        };
+        var serializedBlock = new SerializedBlock(block.PreviousBlockHash, block.Height, block.Hash, block.Timestamp,
+            block.MerkleRoot, block.Difficult, block.Nonce);
 
-        blocks.Insert(serialized);
+        blocks.Insert(serializedBlock);
     }
 
-    public Block Last()
+    public Block GetLast()
     {
-        var serialized = blocks
-            .FindAll()
-            .Last();
-
-        return Serializer.FromBytes<Block>(serialized.Data);
-    }
-
-    public IEnumerable<Block> GetAll()
-    {
-        return blocks
-            .FindAll()
-            .OrderBy(block => block.Timestamp)
-            .Select(block => Serializer.FromBytes<Block>(block.Data));
+        var maxHeight = blocks.Max(block => block.Height);
+        var block = blocks.FindOne(block => block.Height == maxHeight);
+        
+        return new Block(
+            block.PreviousBlockHash, block.Height, block.Hash, block.Timestamp, block.MerkleRoot, block.Difficult, block.Nonce
+        );
     }
 }

@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Core.Repositories;
 using Core.Transactions;
@@ -24,16 +24,27 @@ public class BlockChain
         if (blocksRepository.ExistsAny())
             return;
 
-        MineBlock(peerWallet, Enumerable.Empty<Transaction>(), isFirstBlock: true);
+        MineBlock(peerWallet, Enumerable.Empty<Transaction>(), isGenesis: true);
     }
 
-    public Block MineBlock(Wallet wallet, IEnumerable<Transaction> transactions, bool isFirstBlock = false)
+    public Block MineBlock(Wallet wallet, IEnumerable<Transaction> transactions, bool isGenesis = false)
     {
-        var block = MineBlock(isFirstBlock ? Hashing.ZeroHash : blocksRepository.Last().Hash, 
-            transactions.Prepend(Transaction.CreateCoinbase(wallet, Subsidy)).ToArray(), 
-            Difficult);
+        Block block;
+        var transactionsWithCoinbase = transactions
+            .Prepend(Transaction.CreateCoinbase(wallet, Subsidy))
+            .ToImmutableArray();
+        
+        if (isGenesis)
+        {
+            block = MineBlock(Hashing.ZeroHash, -1, transactionsWithCoinbase, Difficult);
+        }
+        else
+        {
+            var lastBlock = blocksRepository.GetLast();
+            block = MineBlock(lastBlock.Hash, lastBlock.Height, transactionsWithCoinbase, Difficult);
+        }
 
-        blocksRepository.Add(block);
+        blocksRepository.Insert(block);
 
         foreach (var input in block
                      .Transactions
@@ -61,9 +72,11 @@ public class BlockChain
     
     public Transaction CreateTransaction(Wallet sender, string receiverAddress, int amount)
     {
-        var inputs = new List<Input>();
+        var inputs = ImmutableArray.CreateBuilder<Input>();
         var accumulated = 0;
-        foreach (var utxo in FindLockedUtxosWith(sender.PublicKeyHash).OrderBy(utxo => utxo.Output.Value))
+        
+        foreach (var utxo in FindLockedUtxosWith(sender.PublicKeyHash)
+                     .OrderBy(utxo => utxo.Output.Value))
         {
             var input = new Input(utxo.TransactionHash, utxo.OutputIndex, sender.PublicKey);
             inputs.Add(input);
@@ -77,11 +90,13 @@ public class BlockChain
         if (accumulated < amount)
             throw new NotEnoughCurrencyException();
 
-        var outputs = new List<Output> { new(amount, RsaUtils.GetPublicKeyHashFromAddress(receiverAddress)) };
+        var outputs = ImmutableArray.CreateBuilder<Output>();
+        outputs.Add(new Output(amount, RsaUtils.GetPublicKeyHashFromAddress(receiverAddress)));
+        
         if (accumulated > amount)
             outputs.Add(new Output(accumulated - amount, sender.PublicKeyHash));
 
-        var transaction = new Transaction(inputs, outputs);
+        var transaction = new Transaction(inputs.ToImmutable(), outputs.ToImmutable());
         var signature = RsaUtils.SignData(sender.PrivateKey, transaction.Hash);
 
         foreach (var input in inputs)
@@ -95,7 +110,7 @@ public class BlockChain
         return utxosRepository.Filter(utxo => utxo.Output.IsLockedWith(publicKeyHash));
     }
 
-    private static Block MineBlock(string previousBlockHash, IReadOnlyList<Transaction> transactions, int difficult)
+    private static Block MineBlock(string previousBlockHash, int previousHeight, ImmutableArray<Transaction> transactions, int difficult)
     {
         var timestamp = DateTimeOffset.Now.ToUnixTimeSeconds();
 
@@ -104,7 +119,7 @@ public class BlockChain
 
         for (var nonce = 0L; nonce < long.MaxValue; nonce++)
         {
-            var block = new Block(previousBlockHash, timestamp, transactions, difficult, nonce);
+            var block = new Block(previousBlockHash, previousHeight + 1, timestamp, transactions, difficult, nonce);
 
             if (ValidateBlock(block, difficult))
                 return block;

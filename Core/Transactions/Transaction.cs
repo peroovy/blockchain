@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Core.Utils;
 
 namespace Core.Transactions;
 
-[Serializable]
 public class Transaction
 {
-    public Transaction(IReadOnlyList<Input> inputs, IReadOnlyList<Output> outputs, bool isCoinbase = false)
+    public Transaction(ImmutableArray<Input> inputs, ImmutableArray<Output> outputs, bool isCoinbase = false)
     {
         IsCoinbase = isCoinbase;
         Inputs = inputs;
@@ -23,9 +23,9 @@ public class Transaction
     
     public string Hash { get; }
     
-    public IReadOnlyList<Input> Inputs { get; }
+    public ImmutableArray<Input> Inputs { get; }
     
-    public IReadOnlyList<Output> Outputs { get; }
+    public ImmutableArray<Output> Outputs { get; }
     
     public bool IsCoinbase { get; }
 
@@ -34,8 +34,8 @@ public class Transaction
     public static Transaction CreateCoinbase(Wallet wallet, int subsidy)
     {
         return new Transaction(
-            new List<Input> { new(Hashing.ZeroHash, -1, $"Reward to {wallet.Address}: {subsidy}") },
-            new List<Output> { new(subsidy, wallet.PublicKeyHash) },
+            ImmutableArray.Create(new Input(Hashing.ZeroHash, -1, $"Reward to {wallet.Address}: {subsidy}")),
+            ImmutableArray.Create(new Output(subsidy, wallet.PublicKeyHash)),
             isCoinbase: true
         );
     }

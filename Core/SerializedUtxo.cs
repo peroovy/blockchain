@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Core.Repositories;
+namespace Core;
 
 [Serializable]
 public class SerializedUtxo

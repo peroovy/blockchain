@@ -1,43 +1,55 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.Collections.Immutable;
 using System.Linq;
-using System.Runtime.Serialization.Formatters.Binary;
 using Core.Transactions;
 using Core.Utils;
 
 namespace Core;
 
-[Serializable]
 public class Block
 {
     public Block(
-        string previousBlockHash, long timestamp, 
-        IReadOnlyList<Transaction> transactions, 
+        string previousBlockHash, int height, long timestamp, 
+        ImmutableArray<Transaction> transactions, 
         int difficult, long nonce)
     {
         PreviousBlockHash = previousBlockHash;
+        Height = height;
         Timestamp = timestamp;
         Difficult = difficult;
         Nonce = nonce;
         Transactions = transactions;
         
-        var merkleHash = MerkleTree
+        MerkleRoot = MerkleTree
             .Create(Transactions.Select(transaction => transaction.Hash))
             .Hash;
-        
+
         Hash = Hashing
-            .SumSha256(PreviousBlockHash, Timestamp.ToString(), Difficult.ToString(), Nonce.ToString(), merkleHash)
+            .SumSha256(PreviousBlockHash, Timestamp.ToString(), Difficult.ToString(), Nonce.ToString(), MerkleRoot)
             .ToHexDigest();
+    }
+
+    public Block(string previousBlockHash, int height, string hash, long timestamp, string merkleRoot, int difficult, long nonce)
+    {
+        PreviousBlockHash = previousBlockHash;
+        Height = height;
+        Hash = hash;
+        Timestamp = timestamp;
+        MerkleRoot = merkleRoot;
+        Difficult = difficult;
+        Nonce = nonce;
     }
     
     public string PreviousBlockHash { get; }
     
+    public int Height { get; }
+
     public string Hash { get; }
 
     public long Timestamp { get; }
     
-    public IReadOnlyList<Transaction> Transactions { get; }
+    public ImmutableArray<Transaction> Transactions { get; }
+    
+    public string MerkleRoot { get; }
     
     public int Difficult { get; }
     

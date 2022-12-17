@@ -6,9 +6,7 @@ public interface IBlocksRepository
 {
     bool ExistsAny();
     
-    void Add(Block block);
+    void Insert(Block block);
     
-    Block Last();
-    
-    IEnumerable<Block> GetAll();
+    Block GetLast();
 }
