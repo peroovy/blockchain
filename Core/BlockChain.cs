@@ -56,7 +56,8 @@ public class BlockChain
 
         var utxos = block
             .Transactions
-            .SelectMany(transaction => transaction.Outputs.Select((output, i) => new Utxo(transaction.Hash, i, output)));
+            .SelectMany(transaction => transaction.Outputs.Select((output, i) =>
+                new Utxo(transaction.Hash, i, output.Value, output.PublicKeyHash)));
 
         utxosRepository.InsertBulk(utxos);
 
@@ -65,8 +66,9 @@ public class BlockChain
 
     public int GetBalance(string publicKeyHash)
     {
-        return FindLockedUtxosWith(publicKeyHash)
-            .Select(utxo => utxo.Output.Value)
+        return utxosRepository
+            .FindLockedUtxosWith(publicKeyHash)
+            .Select(utxo => utxo.Value)
             .Sum();
     }
     
@@ -75,13 +77,14 @@ public class BlockChain
         var inputs = ImmutableArray.CreateBuilder<Input>();
         var accumulated = 0;
         
-        foreach (var utxo in FindLockedUtxosWith(sender.PublicKeyHash)
-                     .OrderBy(utxo => utxo.Output.Value))
+        foreach (var utxo in utxosRepository
+                     .FindLockedUtxosWith(sender.PublicKeyHash)
+                     .OrderBy(utxo => utxo.Value))
         {
-            var input = new Input(utxo.TransactionHash, utxo.OutputIndex, sender.PublicKey);
+            var input = new Input(utxo.TransactionHash, utxo.Index, sender.PublicKey);
             inputs.Add(input);
             
-            accumulated += utxo.Output.Value;
+            accumulated += utxo.Value;
 
             if (accumulated >= amount)
                 break;
@@ -103,11 +106,6 @@ public class BlockChain
             input.Signature = signature;
 
         return transaction;
-    }
-    
-    private IEnumerable<Utxo> FindLockedUtxosWith(string publicKeyHash)
-    {
-        return utxosRepository.Filter(utxo => utxo.Output.IsLockedWith(publicKeyHash));
     }
 
     private static Block MineBlock(string previousBlockHash, int previousHeight, ImmutableArray<Transaction> transactions, int difficult)

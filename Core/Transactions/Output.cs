@@ -3,7 +3,6 @@ using Core.Utils;
 
 namespace Core.Transactions;
 
-[Serializable]
 public class Output
 {
     public Output(int value, string publicKeyHash)
@@ -20,6 +19,4 @@ public class Output
     public int Value { get; }
     
     public string PublicKeyHash { get; }
-
-    public bool IsLockedWith(string publicKeyHash) => PublicKeyHash == publicKeyHash;
 }

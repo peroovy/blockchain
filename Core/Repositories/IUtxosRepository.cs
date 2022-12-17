@@ -5,7 +5,7 @@ namespace Core.Repositories;
 
 public interface IUtxosRepository
 {
-    IEnumerable<Utxo> Filter(Func<Utxo, bool> predicate);
+    IEnumerable<Utxo> FindLockedUtxosWith(string publicKeyHash);
     
     void DeleteOne(string transactionHash, int outputIndex);
 

@@ -1,34 +1,26 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using Core.Transactions;
-using Core.Utils;
 using LiteDB;
 
 namespace Core.Repositories.LiteDB;
 
 public class UtxosRepository : IUtxosRepository
 {
-    private readonly ILiteCollection<SerializedUtxo> utxosCollection;
+    private readonly ILiteCollection<Utxo> utxosCollection;
     
     public UtxosRepository(ILiteDatabase database)
     {
-        utxosCollection = database.GetCollection<SerializedUtxo>();
+        utxosCollection = database.GetCollection<Utxo>();
     }
 
-    public IEnumerable<Utxo> Filter(Func<Utxo, bool> predicate)
-    {
-        return utxosCollection
-            .FindAll()
-            .Select(serialized => new Utxo(serialized.TransactionHash, serialized.OutputIndex,
-                Serializer.FromBytes<Output>(serialized.Output)))
-            .Where(predicate);
-    }
-
+    public IEnumerable<Utxo> FindLockedUtxosWith(string publicKeyHash) =>
+        utxosCollection.Find(utxo => utxo.PublicKeyHash == publicKeyHash);
+    
     public void DeleteOne(string transactionHash, int outputIndex)
     {
         var num = utxosCollection.DeleteMany(
-            utxo => utxo.TransactionHash == transactionHash && utxo.OutputIndex == outputIndex);
+            utxo => utxo.TransactionHash == transactionHash && utxo.Index == outputIndex
+        );
 
         if (num != 1)
         {
@@ -37,16 +29,5 @@ public class UtxosRepository : IUtxosRepository
         }
     }
 
-    public void InsertBulk(IEnumerable<Utxo> utxos)
-    {
-        var serialized = utxos
-            .Select(utxo => new SerializedUtxo
-            {
-                TransactionHash = utxo.TransactionHash,
-                OutputIndex = utxo.OutputIndex,
-                Output = Serializer.ToBytes(utxo.Output)
-            });
-        
-        utxosCollection.InsertBulk(serialized);
-    }
+    public void InsertBulk(IEnumerable<Utxo> utxos) => utxosCollection.InsertBulk(utxos);
 }

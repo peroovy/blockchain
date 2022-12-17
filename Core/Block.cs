@@ -1,10 +1,13 @@
-﻿using System.Collections.Immutable;
+﻿using System;
+using System.Collections.Immutable;
 using System.Linq;
 using Core.Transactions;
 using Core.Utils;
+using LiteDB;
 
 namespace Core;
 
+[Serializable]
 public class Block
 {
     public Block(
@@ -27,8 +30,10 @@ public class Block
             .SumSha256(PreviousBlockHash, Timestamp.ToString(), Difficult.ToString(), Nonce.ToString(), MerkleRoot)
             .ToHexDigest();
     }
-
-    public Block(string previousBlockHash, int height, string hash, long timestamp, string merkleRoot, int difficult, long nonce)
+    
+    [BsonCtor]
+    public Block(ObjectId _id,
+        string previousBlockHash, int height, string hash, long timestamp, string merkleRoot, int difficult, long nonce)
     {
         PreviousBlockHash = previousBlockHash;
         Height = height;
@@ -47,6 +52,7 @@ public class Block
 
     public long Timestamp { get; }
     
+    [BsonIgnore]
     public ImmutableArray<Transaction> Transactions { get; }
     
     public string MerkleRoot { get; }

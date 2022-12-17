@@ -77,8 +77,6 @@
         <Compile Include="Repositories\LiteDb\UtxosRepository.cs" />
         <Compile Include="Repositories\IBlocksRepository.cs" />
         <Compile Include="Repositories\LiteDb\BlocksRepository.cs" />
-        <Compile Include="SerializedBlock.cs" />
-        <Compile Include="SerializedUtxo.cs" />
         <Compile Include="Transactions\Transaction.cs" />
         <Compile Include="Transactions\Input.cs" />
         <Compile Include="Transactions\Output.cs" />

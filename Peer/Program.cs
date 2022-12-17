@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Core;
 using Core.Repositories.LiteDB;
 using Core.Transactions;

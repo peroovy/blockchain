@@ -6,16 +6,19 @@ namespace Core;
 [Serializable]
 public class Utxo
 {
-    public Utxo(string transactionHash, int outputIndex, Output output)
+    public Utxo(string transactionHash, int index, int value, string publicKeyHash)
     {
         TransactionHash = transactionHash;
-        OutputIndex = outputIndex;
-        Output = output;
+        Index = index;
+        Value = value;
+        PublicKeyHash = publicKeyHash;
     }
 
     public string TransactionHash { get; }
     
-    public int OutputIndex { get; }
+    public int Index { get; }
     
-    public Output Output { get; }
+    public int Value { get; }
+    
+    public string PublicKeyHash { get; }
 }
