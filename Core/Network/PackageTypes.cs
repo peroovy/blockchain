@@ -10,5 +10,7 @@ public enum PackageTypes
     HandshakeWithNetwork,
     BlockChain,
     WantedBlockChain,
-    Transaction
+    Transaction,
+    Block,
+    TransactionConfirmation
 }

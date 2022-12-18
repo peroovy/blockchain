@@ -13,55 +13,57 @@ public class BlockChain
     private readonly IBlocksRepository blocksRepository;
     private readonly IUtxosRepository utxosRepository;
 
-    private const int Subsidy = 60;
-    private const int Difficult = 3;
-
-    public BlockChain(Wallet peerWallet, IBlocksRepository blocksRepository, IUtxosRepository utxosRepository)
+    private const int GenesisSubsidy = 100;
+    private const int GenesisDifficult = 0;
+    
+    public BlockChain(IBlocksRepository blocksRepository, IUtxosRepository utxosRepository)
     {
         this.blocksRepository = blocksRepository;
         this.utxosRepository = utxosRepository;
-
-        if (blocksRepository.ExistsAny())
-            return;
-
-        MineBlock(peerWallet, Enumerable.Empty<Transaction>(), isGenesis: true);
     }
 
-    public Block MineBlock(Wallet wallet, IEnumerable<Transaction> transactions, bool isGenesis = false)
+    public void CreateGenesis(Wallet wallet)
+    {
+        MineBlock(wallet, Array.Empty<Transaction>(), GenesisSubsidy, GenesisDifficult, isGenesis: true);
+    }
+
+    public (Block block, Transaction[], Utxo[] utxos, Input[] inputs) MineBlock(
+        Wallet wallet, IEnumerable<Transaction> transactions, int subsidy, int difficult, bool isGenesis = false)
     {
         Block block;
         var transactionsWithCoinbase = transactions
-            .Prepend(Transaction.CreateCoinbase(wallet, Subsidy))
-            .ToImmutableArray();
+            .Prepend(Transaction.CreateCoinbase(wallet, subsidy))
+            .ToArray();
         
         if (isGenesis)
         {
-            block = MineBlock(Hashing.ZeroHash, -1, transactionsWithCoinbase, Difficult);
+            block = MineBlock(Hashing.ZeroHash, 0, transactionsWithCoinbase, difficult);
         }
         else
         {
             var lastBlock = blocksRepository.GetLast();
-            block = MineBlock(lastBlock.Hash, lastBlock.Height, transactionsWithCoinbase, Difficult);
+            block = MineBlock(lastBlock.Hash, lastBlock.Height, transactionsWithCoinbase, difficult);
         }
 
         blocksRepository.Insert(block);
 
-        foreach (var input in block
-                     .Transactions
-                     .Where(transaction => !transaction.IsCoinbase)
-                     .SelectMany(transaction => transaction.Inputs))
-        {
-            utxosRepository.DeleteOne(input.PreviousTransactionHash, input.OutputIndex);
-        }
+        var inputs = block
+            .Transactions
+            .SelectMany(transaction => transaction.Inputs)
+            .ToArray();
+
+        foreach (var input in inputs)
+            utxosRepository.DeleteOneIfExists(input.PreviousTransactionHash, input.OutputIndex);
 
         var utxos = block
             .Transactions
             .SelectMany(transaction => transaction.Outputs.Select((output, i) =>
-                new Utxo(transaction.Hash, i, output.Value, output.PublicKeyHash)));
+                new Utxo(transaction.Hash, i, output.Value, output.PublicKeyHash)))
+            .ToArray();
 
         utxosRepository.InsertBulk(utxos);
 
-        return block;
+        return (block, transactionsWithCoinbase, utxos, inputs);
     }
 
     public int GetBalance(string publicKeyHash)
@@ -108,7 +110,7 @@ public class BlockChain
         return transaction;
     }
 
-    private static Block MineBlock(string previousBlockHash, int previousHeight, ImmutableArray<Transaction> transactions, int difficult)
+    private static Block MineBlock(string previousBlockHash, int previousHeight, Transaction[] transactions, int difficult)
     {
         var timestamp = DateTimeOffset.Now.ToUnixTimeSeconds();
 

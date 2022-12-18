@@ -3,6 +3,7 @@ using Core.Utils;
 
 namespace Core.Transactions;
 
+[Serializable]
 public class Output
 {
     public Output(int value, string publicKeyHash)

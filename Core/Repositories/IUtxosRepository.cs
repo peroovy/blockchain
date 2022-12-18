@@ -7,7 +7,7 @@ public interface IUtxosRepository
 {
     IEnumerable<Utxo> FindUtxosLockedWith(string publicKeyHash);
     
-    void DeleteOne(string transactionHash, int outputIndex);
+    void DeleteOneIfExists(string transactionHash, int outputIndex);
 
     void InsertBulk(IEnumerable<Utxo> utxos);
     

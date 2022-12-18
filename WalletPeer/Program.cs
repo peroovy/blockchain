@@ -30,18 +30,13 @@ public static class Program
 
     public static void Main(string[] args)
     {
-        var address = new IPEndPoint(
-            IPAddress.Parse(ConfigurationManager.AppSettings["Address"]),
-            // Convert.ToInt32(ConfigurationManager.AppSettings["Port"])
-            port: Convert.ToInt32(Console.ReadLine())
-        );
-
+        var confirmedTransactions = new Queue<string>();
         using var database = new LiteDatabase(BlockChainDb);
         var blocksRepository = new BlocksRepository(database);
         var utxosRepository = new UtxosRepository(database);
         var wallet = Wallet.LoadFrom(PrivateKeyPath, PublicKeyPath);
 
-        var node = new WalletNode(address, Dns, wallet, blocksRepository, utxosRepository);
+        var node = new WalletNode(Address, Dns, wallet, blocksRepository, utxosRepository, confirmedTransactions);
         node.Run();
         node.SendPackageToDns();
         
@@ -49,6 +44,9 @@ public static class Program
         
         while (true)
         {
+            while (confirmedTransactions.Count > 0)
+                Console.WriteLine($"The transaction {confirmedTransactions.Dequeue()} has been confirmed");
+            
             Console.Write(">> ");
             var input = Console.ReadLine();
             if (string.IsNullOrEmpty(input))

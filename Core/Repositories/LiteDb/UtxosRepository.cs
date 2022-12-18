@@ -16,17 +16,9 @@ public class UtxosRepository : IUtxosRepository
     public IEnumerable<Utxo> FindUtxosLockedWith(string publicKeyHash) =>
         utxosCollection.Find(utxo => utxo.PublicKeyHash == publicKeyHash);
     
-    public void DeleteOne(string transactionHash, int outputIndex)
+    public void DeleteOneIfExists(string transactionHash, int outputIndex)
     {
-        var num = utxosCollection.DeleteMany(
-            utxo => utxo.TransactionHash == transactionHash && utxo.Index == outputIndex
-        );
-
-        if (num != 1)
-        {
-            throw new InvalidOperationException(
-                $"Not found with transaction hash '{transactionHash}' and index {outputIndex}");
-        }
+        utxosCollection.DeleteMany(utxo => utxo.TransactionHash == transactionHash && utxo.Index == outputIndex);
     }
 
     public void InsertBulk(IEnumerable<Utxo> utxos) => utxosCollection.InsertBulk(utxos);

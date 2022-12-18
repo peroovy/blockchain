@@ -12,7 +12,7 @@ public class Block
 {
     public Block(
         string previousBlockHash, int height, long timestamp, 
-        ImmutableArray<Transaction> transactions, 
+        Transaction[] transactions, 
         int difficult, long nonce)
     {
         PreviousBlockHash = previousBlockHash;
@@ -54,7 +54,7 @@ public class Block
     
     [BsonIgnore]
     [field: NonSerialized]
-    public ImmutableArray<Transaction> Transactions { get; }
+    public Transaction[] Transactions { get; }
     
     public string MerkleRoot { get; }
     

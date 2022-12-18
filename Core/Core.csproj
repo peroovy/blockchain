@@ -90,7 +90,10 @@
         <Compile Include="Network\PackageTypes.cs" />
         <Compile Include="Network\Node.cs" />
         <Compile Include="Network\Package.cs" />
+        <Compile Include="Network\Peer.cs" />
+        <Compile Include="Network\SerializedBlock.cs" />
         <Compile Include="Network\SerializedBlockChain.cs" />
+        <Compile Include="Network\SpentUtxo.cs" />
         <Compile Include="Network\Version.cs" />
         <Compile Include="NotEnoughCurrencyException.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />

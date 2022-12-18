@@ -18,9 +18,9 @@ public abstract class Node
         listener = new TcpListener(new IPEndPoint(IPAddress.Parse("0.0.0.0"), port));
     }
 
-    public void Run()
+    public virtual void Run()
     {
-        var thread = new Thread(() =>
+        var listenerThread = new Thread(() =>
         {
             listener.Start();
 
@@ -31,7 +31,7 @@ public abstract class Node
                 Receive(node);
             }
         });
-        thread.Start();
+        listenerThread.Start();
     }
 
     protected abstract void HandlePackage(Package package); 
