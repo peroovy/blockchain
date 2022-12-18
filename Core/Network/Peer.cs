@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using Core.Repositories;
 using Core.Utils;
 
@@ -17,6 +18,8 @@ public abstract class Peer : Node
     private readonly IBlocksRepository blocksRepository;
     private readonly IUtxosRepository utxosRepository;
 
+    private const int DnsRequestPeriodMilliseconds = 3 * 60 * 1000;
+
     protected Peer(IPEndPoint address, IPEndPoint dns, 
         Wallet wallet, IBlocksRepository blocksRepository, IUtxosRepository utxosRepository) 
         : base(address.Address, address.Port)
@@ -28,13 +31,14 @@ public abstract class Peer : Node
         BlockChain = new BlockChain(blocksRepository, utxosRepository);
     }
 
-    public void SendPackageToDns()
+    public override void Run()
     {
-        var package = new Package(AddressFrom, PackageTypes.Addresses, Array.Empty<byte>());
-        
-        Send(dns, package);
+        base.Run();
+
+        var scheduledGettingActiveNodesThread = new Thread(SendPackageToDns);
+        scheduledGettingActiveNodesThread.Start();
     }
-    
+
     protected override void HandlePackage(Package package)
     {
         switch (package.PackageTypes)
@@ -158,5 +162,16 @@ public abstract class Peer : Node
 
         foreach (var spentUtxo in serializedBlock.SpentUtxos)
             utxosRepository.DeleteOneIfExists(spentUtxo.TransactionHash, spentUtxo.Index);
+    }
+    
+    private void SendPackageToDns()
+    {
+        var package = new Package(AddressFrom, PackageTypes.Addresses, Array.Empty<byte>());
+
+        while (true)
+        {
+            Send(dns, package);
+            Thread.Sleep(DnsRequestPeriodMilliseconds);
+        }
     }
 }

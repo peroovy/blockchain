@@ -36,9 +36,9 @@ internal static class Program
 
         var node = new MinerNode(Address, Dns, Logger, wallet, blocksRepository, utxosRepository);
         node.Run();
+        
         Logger.LogInformation($"Start on {Address}");
         
-        node.SendPackageToDns();
         Thread.Sleep(Timeout.Infinite);
     }
 }

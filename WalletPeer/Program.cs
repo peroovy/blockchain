@@ -38,7 +38,6 @@ public static class Program
 
         var node = new WalletNode(Address, Dns, wallet, blocksRepository, utxosRepository, confirmedTransactions);
         node.Run();
-        node.SendPackageToDns();
         
         var commands = GetConsoleCommands(node);
         
