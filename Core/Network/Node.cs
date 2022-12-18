@@ -1,55 +1,68 @@
-﻿using System;
-using System.Configuration;
+﻿using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 using Core.Utils;
 
 namespace Core.Network;
 
-public class Node
+public abstract class Node
 {
-    private readonly TcpListener server;
-    private readonly TcpClient client;
+    protected readonly IPEndPoint AddressFrom;
     
-    private static readonly IPEndPoint DnsEndPoint = new(
-        IPAddress.Parse(ConfigurationManager.AppSettings["DnsAddress"]),
-        Convert.ToInt32(ConfigurationManager.AppSettings["DnsPort"]));
+    private readonly TcpListener listener;
 
-    public Node()
+    protected Node(IPAddress address, int port)
     {
-        server = new TcpListener(IPAddress.Any, 0);
-        var port = ((IPEndPoint)server.LocalEndpoint).Port;
-
-        client = new TcpClient(new IPEndPoint(IPAddress.Any, port));
+        AddressFrom = new IPEndPoint(address, port);
+        listener = new TcpListener(new IPEndPoint(IPAddress.Parse("0.0.0.0"), port));
     }
 
     public void Run()
     {
-        server.Start();
-        foreach (var endPoint in GetAnotherNodes())
+        var thread = new Thread(() =>
         {
-            Console.WriteLine(endPoint);
-        }
+            listener.Start();
+
+            while (true)
+            {
+                var node = listener.AcceptTcpClient();
+
+                Receive(node);
+            }
+        });
+        thread.Start();
     }
 
-    private EndPoint[] GetAnotherNodes()
+    protected abstract void HandlePackage(Package package); 
+    
+    protected void Send(IPEndPoint remoteEndPoint, Package package)
     {
-        var data = MakeRequest(DnsEndPoint, Serializer.ToBytes(DnsCommands.Connect));
+        var data = Serializer.ToBytes(package);
 
-        return Serializer.FromBytes<EndPoint[]>(data);
-    }
-
-    private byte[] MakeRequest(IPEndPoint point, byte[] data)
-    {
-        client.Connect(point);
-        using var stream = client.GetStream();
+        var client = new TcpClient();
+        client.Connect(remoteEndPoint);
         
+        var stream = client.GetStream();
         stream.Write(data, 0, data.Length);
-        stream.Flush();
+    }
+    
+    private void Receive(TcpClient node)
+    {
+        using var stream = node.GetStream();
 
-        var receiveData = new byte[client.ReceiveBufferSize];
-        stream.Read(receiveData, 0, receiveData.Length);
+        var memoryStream = new MemoryStream();
+        var buffer = new byte[512];
+
+        do
+        {
+            var amount = stream.Read(buffer, 0, buffer.Length);
+            memoryStream.Write(buffer, 0, amount);
+                
+        } while (node.Available > 0);
         
-        return receiveData;
+        node.Close();
+
+        HandlePackage(Serializer.FromBytes<Package>(memoryStream.GetBuffer()));
     }
 }

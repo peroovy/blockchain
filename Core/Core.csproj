@@ -87,8 +87,11 @@
         <Compile Include="Block.cs" />
         <Compile Include="BlockChain.cs" />
         <Compile Include="InvalidTransactionException.cs" />
-        <Compile Include="Network\DnsCommands.cs" />
+        <Compile Include="Network\PackageTypes.cs" />
         <Compile Include="Network\Node.cs" />
+        <Compile Include="Network\Package.cs" />
+        <Compile Include="Network\SerializedBlockChain.cs" />
+        <Compile Include="Network\Version.cs" />
         <Compile Include="NotEnoughCurrencyException.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
         <Compile Include="Repositories\IUtxosRepository.cs" />

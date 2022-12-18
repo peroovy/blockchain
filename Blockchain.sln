@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Peer", "Peer\Peer.csproj", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DNS", "DNS\DNS.csproj", "{8842B263-61A0-4B7D-8561-FE3D8CD13179}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WalletPeer", "WalletPeer\WalletPeer.csproj", "{6FAF8B63-AB5C-4E27-8B98-0B455361046A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{8842B263-61A0-4B7D-8561-FE3D8CD13179}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8842B263-61A0-4B7D-8561-FE3D8CD13179}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8842B263-61A0-4B7D-8561-FE3D8CD13179}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6FAF8B63-AB5C-4E27-8B98-0B455361046A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6FAF8B63-AB5C-4E27-8B98-0B455361046A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6FAF8B63-AB5C-4E27-8B98-0B455361046A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6FAF8B63-AB5C-4E27-8B98-0B455361046A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

@@ -13,7 +13,7 @@ public class UtxosRepository : IUtxosRepository
         utxosCollection = database.GetCollection<Utxo>();
     }
 
-    public IEnumerable<Utxo> FindLockedUtxosWith(string publicKeyHash) =>
+    public IEnumerable<Utxo> FindUtxosLockedWith(string publicKeyHash) =>
         utxosCollection.Find(utxo => utxo.PublicKeyHash == publicKeyHash);
     
     public void DeleteOne(string transactionHash, int outputIndex)
@@ -30,4 +30,6 @@ public class UtxosRepository : IUtxosRepository
     }
 
     public void InsertBulk(IEnumerable<Utxo> utxos) => utxosCollection.InsertBulk(utxos);
+
+    public void DeleteAll() => utxosCollection.DeleteAll();
 }

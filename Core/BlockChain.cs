@@ -67,7 +67,7 @@ public class BlockChain
     public int GetBalance(string publicKeyHash)
     {
         return utxosRepository
-            .FindLockedUtxosWith(publicKeyHash)
+            .FindUtxosLockedWith(publicKeyHash)
             .Select(utxo => utxo.Value)
             .Sum();
     }
@@ -78,7 +78,7 @@ public class BlockChain
         var accumulated = 0;
         
         foreach (var utxo in utxosRepository
-                     .FindLockedUtxosWith(sender.PublicKeyHash)
+                     .FindUtxosLockedWith(sender.PublicKeyHash)
                      .OrderBy(utxo => utxo.Value))
         {
             var input = new Input(utxo.TransactionHash, utxo.Index, sender.PublicKey);

@@ -53,6 +53,7 @@ public class Block
     public long Timestamp { get; }
     
     [BsonIgnore]
+    [field: NonSerialized]
     public ImmutableArray<Transaction> Transactions { get; }
     
     public string MerkleRoot { get; }
