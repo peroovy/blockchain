@@ -5,6 +5,7 @@ using System.Net;
 using Core;
 using Core.Network;
 using Core.Repositories;
+using Core.Transactions;
 using Core.Utils;
 using Version = Core.Network.Version;
 
@@ -16,6 +17,7 @@ public class WalletNode : Node
     private readonly Wallet wallet;
     private readonly IBlocksRepository blocksRepository;
     private readonly IUtxosRepository utxosRepository;
+    private readonly BlockChain blockChain;
     private readonly ConcurrentBag<IPEndPoint> addresses = new();
 
     public WalletNode(IPEndPoint address, IPEndPoint dns, 
@@ -26,13 +28,28 @@ public class WalletNode : Node
         this.wallet = wallet;
         this.blocksRepository = blocksRepository;
         this.utxosRepository = utxosRepository;
+        blockChain = new BlockChain(wallet, blocksRepository, utxosRepository);
     }
+
+    public int Balance => blockChain.GetBalance(wallet.PublicKeyHash);
 
     public void SendPackageToDns()
     {
         var package = new Package(AddressFrom, PackageTypes.Addresses, Array.Empty<byte>());
         
         Send(dns, package);
+    }
+
+    public Transaction AddTransactionToMempool(string receiverAddress, int amount)
+    {
+        var transaction = blockChain.CreateTransaction(wallet, receiverAddress, amount);
+
+        var serializedTransaction = Serializer.ToBytes(transaction);
+        var package = new Package(AddressFrom, PackageTypes.Transaction, serializedTransaction);
+        foreach (var address in addresses)
+            Send(address, package);
+        
+        return transaction;
     }
 
     protected override void HandlePackage(Package package)

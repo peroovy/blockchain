@@ -9,5 +9,6 @@ public enum PackageTypes
     Addresses,
     HandshakeWithNetwork,
     BlockChain,
-    WantedBlockChain
+    WantedBlockChain,
+    Transaction
 }

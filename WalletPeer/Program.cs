@@ -12,8 +12,22 @@ using WalletPeer.Commands;
 
 namespace WalletPeer;
 
-public class Program
+public static class Program
 {
+    private static readonly IPEndPoint Address = new(
+        IPAddress.Parse(ConfigurationManager.AppSettings["Address"]),
+        Convert.ToInt32(ConfigurationManager.AppSettings["Port"])
+    );
+    
+    private static readonly IPEndPoint Dns = new(
+        IPAddress.Parse(ConfigurationManager.AppSettings["DnsAddress"]),
+        Convert.ToInt32(ConfigurationManager.AppSettings["DnsPort"])
+    );
+
+    private const string BlockChainDb = "blockchain.db";
+    private const string PrivateKeyPath = "wallet";
+    private const string PublicKeyPath = "wallet.pub";
+
     public static void Main(string[] args)
     {
         var address = new IPEndPoint(
@@ -21,21 +35,17 @@ public class Program
             // Convert.ToInt32(ConfigurationManager.AppSettings["Port"])
             port: Convert.ToInt32(Console.ReadLine())
         );
-        var dns = new IPEndPoint(
-            IPAddress.Parse(ConfigurationManager.AppSettings["DnsAddress"]),
-            Convert.ToInt32(ConfigurationManager.AppSettings["DnsPort"])
-        );
 
-        using var database = new LiteDatabase("blockchain.db");
+        using var database = new LiteDatabase(BlockChainDb);
         var blocksRepository = new BlocksRepository(database);
         var utxosRepository = new UtxosRepository(database);
-        var wallet = Wallet.LoadFrom("wallet", "wallet.pub");
+        var wallet = Wallet.LoadFrom(PrivateKeyPath, PublicKeyPath);
 
-        var node = new WalletNode(address, dns, wallet, blocksRepository, utxosRepository);
+        var node = new WalletNode(address, Dns, wallet, blocksRepository, utxosRepository);
         node.Run();
         node.SendPackageToDns();
         
-        var commands = GetConsoleCommands();
+        var commands = GetConsoleCommands(node);
         
         while (true)
         {
@@ -54,12 +64,12 @@ public class Program
         }
     }
 
-    private static Dictionary<string, ICommand> GetConsoleCommands()
+    private static Dictionary<string, ICommand> GetConsoleCommands(WalletNode node)
     {
         var commands = new List<ICommand>
         {
-            new BalanceCommand(), 
-            new SendCommand()
+            new BalanceCommand(node), 
+            new SendCommand(node)
         };
         
         var help = new HelpCommand(commands);

@@ -6,13 +6,14 @@ using Core.Utils;
 
 namespace Core.Transactions;
 
+[Serializable]
 public class Transaction
 {
     public Transaction(ImmutableArray<Input> inputs, ImmutableArray<Output> outputs, bool isCoinbase = false)
     {
         IsCoinbase = isCoinbase;
-        Inputs = inputs;
-        Outputs = outputs;
+        Inputs = inputs.ToArray();
+        Outputs = outputs.ToArray();
 
         var inputSumHash = string.Concat(inputs.Select(input => input.Hash));
         var outputSumHash = string.Concat(outputs.Select(output => output.Hash));
@@ -23,9 +24,9 @@ public class Transaction
     
     public string Hash { get; }
     
-    public ImmutableArray<Input> Inputs { get; }
+    public Input[] Inputs { get; }
     
-    public ImmutableArray<Output> Outputs { get; }
+    public Output[] Outputs { get; }
     
     public bool IsCoinbase { get; }
 
