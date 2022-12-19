@@ -3,6 +3,7 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 using Core.Utils;
 
 namespace Core.Network;
@@ -29,7 +30,7 @@ public abstract class Node
             {
                 var node = listener.AcceptTcpClient();
 
-                Receive(node);
+                Task.Run(() => Receive(node));
             }
         });
         listenerThread.Start();
@@ -68,8 +69,6 @@ public abstract class Node
             total += amount;
         } while (total < length);
         
-        node.Close();
-
         HandlePackage(Serializer.FromBytes<Package>(memoryStream.GetBuffer()));
     }
 }
