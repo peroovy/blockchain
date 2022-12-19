@@ -19,7 +19,7 @@ public class MinerNode : Peer
 
     private const int MaxMempoolLength = 1;
     private const int Subsidy = 60;
-    private const int Difficult = 3;
+    private const int Difficult = 5;
     
     public MinerNode(IPEndPoint address, IPEndPoint dns, ILogger logger,
         Wallet wallet, IBlocksRepository blocksRepository, IUtxosRepository utxosRepository) 
