@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -19,7 +18,7 @@ public class MinerNode : Peer
 
     private const int MaxMempoolLength = 1;
     private const int Subsidy = 60;
-    private const int Difficult = 5;
+    private const int Difficult = 4;
     
     public MinerNode(IPEndPoint address, IPEndPoint dns, ILogger logger,
         Wallet wallet, IBlocksRepository blocksRepository, IUtxosRepository utxosRepository) 

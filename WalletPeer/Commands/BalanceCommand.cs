@@ -8,7 +8,7 @@ public class BalanceCommand : ICommand
     
     public string Name => "balance";
 
-    public string Description => "Search for unspent transaction outputs";
+    public string Description => "Searches for unspent transaction outputs";
 
     public BalanceCommand(WalletNode node)
     {

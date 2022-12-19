@@ -15,7 +15,7 @@ public class SendCommand : ICommand
     
     public string Name => "send";
 
-    public string Description => "Сreating an unconfirmed transaction and storing to the mempool";
+    public string Description => "Сreates an unconfirmed transaction and storing to the mempool";
 
     public void Execute()
     {
@@ -32,7 +32,7 @@ public class SendCommand : ICommand
 
         try
         {
-            var transaction = node.AddTransactionToMempool(receiverAddress, amount);
+            var transaction = node.CreateTransaction(receiverAddress, amount);
             Console.WriteLine($"Transaction: {transaction.Hash}");
         }
         catch (NotEnoughCurrencyException)

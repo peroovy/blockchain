@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Configuration;
 using System.Linq;
 using System.Net;
 using Core;
-using Core.Repositories;
 using Core.Repositories.LiteDB;
 using LiteDB;
 using WalletPeer.Commands;
@@ -30,22 +28,18 @@ public static class Program
 
     public static void Main(string[] args)
     {
-        var confirmedTransactions = new Queue<string>();
         using var database = new LiteDatabase(BlockChainDb);
         var blocksRepository = new BlocksRepository(database);
         var utxosRepository = new UtxosRepository(database);
         var wallet = Wallet.LoadFrom(PrivateKeyPath, PublicKeyPath);
 
-        var node = new WalletNode(Address, Dns, wallet, blocksRepository, utxosRepository, confirmedTransactions);
+        var node = new WalletNode(Address, Dns, wallet, blocksRepository, utxosRepository);
         node.Run();
         
         var commands = GetConsoleCommands(node);
         
         while (true)
         {
-            while (confirmedTransactions.Count > 0)
-                Console.WriteLine($"The transaction {confirmedTransactions.Dequeue()} has been confirmed");
-            
             Console.Write(">> ");
             var input = Console.ReadLine();
             if (string.IsNullOrEmpty(input))
@@ -67,7 +61,8 @@ public static class Program
         {
             new BalanceCommand(node), 
             new SendCommand(node),
-            new AddressCommand(node)
+            new AddressCommand(node),
+            new ConfirmationsCommand(node)
         };
         
         var help = new HelpCommand(commands);

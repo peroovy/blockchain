@@ -18,7 +18,7 @@ public class HelpCommand : ICommand
 
     public string Name => "help";
 
-    public string Description => "Help";
+    public string Description => "Shows all commands";
 
     public void Execute()
     {

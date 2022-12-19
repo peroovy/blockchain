@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
 using System.Net;
 using System.Text;
 using Core;
@@ -11,19 +11,35 @@ namespace WalletPeer;
 
 public class WalletNode : Peer
 {
-    private readonly Queue<string> confirmedTransactions;
-
+    private readonly ConcurrentDictionary<string, int> confirmedTransaction = new();
+    
     public WalletNode(IPEndPoint address, IPEndPoint dns, 
-        Wallet wallet, IBlocksRepository blocksRepository, IUtxosRepository utxosRepository, Queue<string> confirmedTransactions) 
+        Wallet wallet, IBlocksRepository blocksRepository, IUtxosRepository utxosRepository) 
         : base(address, dns, wallet, blocksRepository, utxosRepository)
     {
-        this.confirmedTransactions = confirmedTransactions;
     }
 
     public string Address => Wallet.Address;
     
     public int Balance => BlockChain.GetBalance(Wallet.PublicKeyHash);
 
+    public int GetConfirmationsNumberByTransactionHash(string hash)
+    {
+        return !confirmedTransaction.TryGetValue(hash, out var number) ? 0 : number;
+    }
+    
+    public Transaction CreateTransaction(string receiverAddress, int amount)
+    {
+        var transaction = BlockChain.CreateTransaction(Wallet, receiverAddress, amount);
+
+        var serializedTransaction = Serializer.ToBytes(transaction);
+        var package = new Package(AddressFrom, PackageTypes.Transaction, serializedTransaction);
+        foreach (var address in Addresses.Keys)
+            Send(address, package);
+        
+        return transaction;
+    }
+    
     protected override void HandlePackage(Package package)
     {
         base.HandlePackage(package);
@@ -36,22 +52,13 @@ public class WalletNode : Peer
         }
     }
 
-    public Transaction AddTransactionToMempool(string receiverAddress, int amount)
-    {
-        var transaction = BlockChain.CreateTransaction(Wallet, receiverAddress, amount);
-
-        var serializedTransaction = Serializer.ToBytes(transaction);
-        var package = new Package(AddressFrom, PackageTypes.Transaction, serializedTransaction);
-        foreach (var address in Addresses.Keys)
-            Send(address, package);
-        
-        return transaction;
-    }
-
     private void HandleTransactionConfirmation(Package package)
     {
         var hash = Encoding.UTF8.GetString(package.Body);
-        
-        confirmedTransactions.Enqueue(hash);
+
+        if (!confirmedTransaction.ContainsKey(hash))
+            confirmedTransaction[hash] = 0;
+
+        confirmedTransaction[hash] += 1;
     }
 }
