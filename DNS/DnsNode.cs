@@ -21,25 +21,29 @@ public class DnsNode : Node
     
     protected override void HandlePackage(Package package)
     {
-        logger.LogInformation($"Connect with {package.AddressFrom}");
+        var addressFrom = package.AddressFrom;
+        logger.LogInformation($"Connect with {addressFrom}");
         
-        SendBroadcast();
+        SendBroadcast(addressFrom);
 
         var addresses = Addresses
             .Keys
-            .Where(address => !address.Equals(package.AddressFrom))
+            .Where(address => !address.Equals(addressFrom))
             .ToArray();
-        Addresses[package.AddressFrom] = DateTime.Now.Ticks;
+        Addresses[addressFrom] = DateTime.Now.Ticks;
 
         var responsePackage = new Package(AddressFrom, PackageTypes.Addresses, Serializer.ToBytes(addresses));
-        Send(package.AddressFrom, responsePackage);
+        Send(addressFrom, responsePackage);
     }
     
-    private void SendBroadcast()
+    private void SendBroadcast(IPEndPoint addressFrom)
     {
         var package = new Package(AddressFrom, PackageTypes.Broadcast, Array.Empty<byte>());
         
-        foreach (var address in Addresses.Keys.ToArray())
+        foreach (var address in Addresses
+                     .Keys
+                     .Where(point => !point.Equals(addressFrom))
+                     .ToArray())
         {
             try
             {
