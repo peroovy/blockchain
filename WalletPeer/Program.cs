@@ -66,7 +66,8 @@ public static class Program
         var commands = new List<ICommand>
         {
             new BalanceCommand(node), 
-            new SendCommand(node)
+            new SendCommand(node),
+            new AddressCommand(node)
         };
         
         var help = new HelpCommand(commands);

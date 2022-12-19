@@ -20,6 +20,8 @@ public class WalletNode : Peer
         this.confirmedTransactions = confirmedTransactions;
     }
 
+    public string Address => Wallet.Address;
+    
     public int Balance => BlockChain.GetBalance(Wallet.PublicKeyHash);
 
     protected override void HandlePackage(Package package)

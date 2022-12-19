@@ -116,6 +116,7 @@
         <Reference Include="System.Xml" />
     </ItemGroup>
     <ItemGroup>
+        <Compile Include="Commands\AddressCommand.cs" />
         <Compile Include="Commands\BalanceCommand.cs" />
         <Compile Include="Commands\HelpCommand.cs" />
         <Compile Include="Commands\ICommand.cs" />
