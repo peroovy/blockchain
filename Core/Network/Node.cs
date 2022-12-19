@@ -3,6 +3,7 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 using Core.Utils;
 
 namespace Core.Network;
@@ -43,7 +44,11 @@ public abstract class Node
         var messageLength = BitConverter.GetBytes(data.Length);
 
         var client = new TcpClient();
-        client.Connect(remoteEndPoint);
+        var result = client.BeginConnect(remoteEndPoint.Address, remoteEndPoint.Port, null, null);
+        var success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(2));
+        
+        if (!success)
+            return;
         
         var stream = client.GetStream();
         stream.Write(messageLength, 0, messageLength.Length);
