@@ -67,7 +67,7 @@ public class MinerNode : Peer
             .ToArray();
         var serializedBlock = new SerializedBlock(block, transactions, utxos, spentUtxos);
         var blockPackage = new Package(AddressFrom, PackageTypes.Block, Serializer.ToBytes(serializedBlock));
-        foreach (var address in Addresses)
+        foreach (var address in Addresses.Keys)
             Send(address, blockPackage);
     }
 

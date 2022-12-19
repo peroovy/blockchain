@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Net;
 using System.Text;
 using Core;
@@ -41,7 +40,7 @@ public class WalletNode : Peer
 
         var serializedTransaction = Serializer.ToBytes(transaction);
         var package = new Package(AddressFrom, PackageTypes.Transaction, serializedTransaction);
-        foreach (var address in Addresses)
+        foreach (var address in Addresses.Keys)
             Send(address, package);
         
         return transaction;

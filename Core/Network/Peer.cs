@@ -12,7 +12,7 @@ public abstract class Peer : Node
 {
     protected readonly Wallet Wallet;
     protected readonly BlockChain BlockChain;
-    protected readonly ConcurrentBag<IPEndPoint> Addresses = new();
+    protected readonly ConcurrentDictionary<IPEndPoint, bool> Addresses = new();
     
     private readonly IPEndPoint dns;
     private readonly IBlocksRepository blocksRepository;
@@ -44,12 +44,10 @@ public abstract class Peer : Node
         switch (package.PackageTypes)
         {
             case PackageTypes.Addresses:
-                StoreNodesFromDns(package);
-                HandshakeWithNetwork();
+                HandshakeWithNetwork(package);
                 break;
             
             case PackageTypes.HandshakeWithNetwork:
-                StoreNewNode(package);
                 SendBlockChainToNewNode(package);
                 break;
             
@@ -67,14 +65,11 @@ public abstract class Peer : Node
         }
     }
 
-    private void StoreNodesFromDns(Package package)
+    private void HandshakeWithNetwork(Package package)
     {
         foreach (var address in Serializer.FromBytes<IPEndPoint[]>(package.Body))
-            Addresses.Add(address);
-    }
-
-    private void HandshakeWithNetwork()
-    {
+            Addresses.AddAddress(address);
+        
         if (Addresses.Count == 0 && !blocksRepository.ExistsAny())
         {
             BlockChain.CreateGenesis(Wallet);
@@ -85,17 +80,14 @@ public abstract class Peer : Node
         var version = new Version(height, Wallet.PublicKeyHash);
         
         var handshakePackage = new Package(AddressFrom, PackageTypes.HandshakeWithNetwork, Serializer.ToBytes(version));
-        foreach (var address in Addresses)
+        foreach (var address in Addresses.Keys)
             Send(address, handshakePackage);
-    }
-
-    private void StoreNewNode(Package package)
-    {
-        Addresses.Add(package.AddressFrom);
     }
 
     private void SendBlockChainToNewNode(Package package)
     {
+        Addresses.AddAddress(package.AddressFrom);
+
         var remoteVersion = Serializer.FromBytes<Version>(package.Body);
         var height = blocksRepository.GetMaxHeight();
         

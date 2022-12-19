@@ -87,6 +87,7 @@
         <Compile Include="Block.cs" />
         <Compile Include="BlockChain.cs" />
         <Compile Include="InvalidTransactionException.cs" />
+        <Compile Include="Network\ConcurrentDictionaryExtensions.cs" />
         <Compile Include="Network\PackageTypes.cs" />
         <Compile Include="Network\Node.cs" />
         <Compile Include="Network\Package.cs" />
