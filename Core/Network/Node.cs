@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -39,11 +40,13 @@ public abstract class Node
     protected void Send(IPEndPoint remoteEndPoint, Package package)
     {
         var data = Serializer.ToBytes(package);
+        var messageLength = BitConverter.GetBytes(data.Length);
 
         var client = new TcpClient();
         client.Connect(remoteEndPoint);
         
         var stream = client.GetStream();
+        stream.Write(messageLength, 0, messageLength.Length);
         stream.Write(data, 0, data.Length);
     }
     
@@ -51,15 +54,19 @@ public abstract class Node
     {
         using var stream = node.GetStream();
 
-        var memoryStream = new MemoryStream();
+        var messageLength = new byte[4];
+        stream.Read(messageLength, 0, messageLength.Length);
+        var length = BitConverter.ToInt32(messageLength, 0);
+        
+        using var memoryStream = new MemoryStream();
         var buffer = new byte[512];
-
+        var total = 0;
         do
         {
             var amount = stream.Read(buffer, 0, buffer.Length);
             memoryStream.Write(buffer, 0, amount);
-                
-        } while (node.Available > 0);
+            total += amount;
+        } while (total < length);
         
         node.Close();
 
