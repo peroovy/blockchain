@@ -73,7 +73,25 @@ public class MinerNode : Peer
     private bool ValidateNewTransaction(Transaction transaction)
     {
         var verifiedSignature = transaction.VerifySignature();
+        var isSelf = IsAccrualSelf(transaction);
+        var existedLockedOutputs = ExistsLockedOutputs(transaction);
 
+        return verifiedSignature && !isSelf && !existedLockedOutputs;
+    }
+
+    private bool IsAccrualSelf(Transaction transaction)
+    {
+        var inputHash = RsaUtils
+            .HashPublicKey(transaction.Inputs[0].PublicKey)
+            .ToHexDigest();
+
+        return transaction
+            .Outputs
+            .All(output => output.PublicKeyHash == inputHash);
+    }
+
+    private bool ExistsLockedOutputs(Transaction transaction)
+    {
         var uniqueSelectedOutputs = mempool
             .SelectMany(tx => tx.Inputs)
             .Select(input => (input.PreviousTransactionHash, input.OutputIndex))
@@ -83,6 +101,6 @@ public class MinerNode : Peer
             .Select(input => (input.PreviousTransactionHash, input.OutputIndex))
             .Any(output => uniqueSelectedOutputs.Contains(output));
 
-        return verifiedSignature && !existedLockedOutputs;
+        return existedLockedOutputs;
     }
 }
