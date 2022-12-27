@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Linq;
 using System.Net;
-using System.Threading;
-using System.Threading.Tasks;
 using Core.Utils;
 
 namespace Core.Network;
@@ -12,11 +9,8 @@ public abstract class Peer : P2PNode
 {
     protected readonly Wallet Wallet;
     protected readonly BlockChain BlockChain;
-    private readonly ConcurrentDictionary<IPEndPoint, bool> addresses = new();
     
     private readonly IPEndPoint dns;
-    
-    private const int DnsRequestPeriodMilliseconds = 2 * 60 * 1000;
 
     protected Peer(IPEndPoint address, IPEndPoint dns, Wallet wallet) : base(address.Address, address.Port)
     {
@@ -29,8 +23,8 @@ public abstract class Peer : P2PNode
     {
         base.Run();
 
-        var scheduledGettingActiveNodesThread = new Thread(SendPackageToDns);
-        scheduledGettingActiveNodesThread.Start();
+        var package = new Package(AddressFrom, PackageTypes.Addresses, Array.Empty<byte>());
+        Send(dns, package);
         
         if (BlockChain.IsEmpty)
             BlockChain.CreateGenesis(Wallet);
@@ -41,7 +35,6 @@ public abstract class Peer : P2PNode
         switch (package.PackageType)
         {
             case PackageTypes.Addresses:
-                UpdateAddresses(package);
                 SendVersion();
                 break;
             
@@ -58,18 +51,6 @@ public abstract class Peer : P2PNode
                 break;
         }
     }
-    
-    protected void SendBroadcast(Package package)
-    {
-        foreach (var address in addresses.Keys)
-            Task.Run(() => Send(address, package));
-    }
-
-    private void UpdateAddresses(Package package)
-    {
-        foreach (var address in Serializer.FromBytes<IPEndPoint[]>(package.Data))
-            addresses.Add(address);
-    }
 
     private void SendVersion()
     {
@@ -81,8 +62,6 @@ public abstract class Peer : P2PNode
 
     private void SendBlockChain(Package package)
     {
-        addresses.Add(package.AddressFrom);
-
         var remoteVersion = Serializer.FromBytes<Version>(package.Data);
         var height = BlockChain.Height;
         
@@ -114,16 +93,5 @@ public abstract class Peer : P2PNode
         var block = Serializer.FromBytes<Block>(package.Data);
 
         BlockChain.TryAddBlock(block);
-    }
-    
-    private void SendPackageToDns()
-    {
-        var package = new Package(AddressFrom, PackageTypes.Addresses, Array.Empty<byte>());
-
-        while (true)
-        {
-            Send(dns, package);
-            Thread.Sleep(DnsRequestPeriodMilliseconds);
-        }
     }
 }

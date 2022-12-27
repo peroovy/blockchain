@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Linq;
 using System.Net;
 using Core.Network;
@@ -11,9 +10,7 @@ namespace DNS;
 public class DnsNode : P2PNode
 {
     private readonly ILogger logger;
-    private readonly ConcurrentDictionary<IPEndPoint, long> addresses = new();
-
-    private const int TtlSeconds = 3 * 60;
+    private readonly ConcurrentDictionary<IPEndPoint, bool> addresses = new();
 
     public DnsNode(ILogger logger, IPAddress address, int port) : base(address, port)
     {
@@ -26,12 +23,11 @@ public class DnsNode : P2PNode
         
         logger.LogInformation($"Connect with {addressFrom}");
         
-        var now = DateTimeOffset.Now.ToUnixTimeSeconds();
         var endPoints = addresses
-            .Where(pair => !pair.Key.Equals(addressFrom) && now < pair.Value + TtlSeconds)
+            .Where(pair => !pair.Key.Equals(addressFrom))
             .Select(pair => pair.Key)
             .ToArray();
-        addresses[addressFrom] = now;
+        addresses[addressFrom] = true;
 
         var responsePackage = new Package(AddressFrom, PackageTypes.Addresses, Serializer.ToBytes(endPoints));
         Send(addressFrom, responsePackage);

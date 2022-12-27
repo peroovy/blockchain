@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -13,6 +14,7 @@ public abstract class P2PNode
     protected readonly IPEndPoint AddressFrom;
     
     private readonly TcpListener listener;
+    private readonly ConcurrentDictionary<IPEndPoint, bool> addresses = new();
 
     protected P2PNode(IPAddress address, int port)
     {
@@ -43,20 +45,36 @@ public abstract class P2PNode
 
     protected abstract void HandlePackage(Package package); 
     
-    protected static void Send(IPEndPoint remoteEndPoint, Package package)
+    protected void SendBroadcast(Package package)
+    {
+        foreach (var address in addresses.Keys)
+            Task.Run(() => Send(address, package));
+    }
+    
+    protected void Send(IPEndPoint remoteEndPoint, Package package)
     {
         var data = Serializer.ToBytes(package);
         var messageLength = BitConverter.GetBytes(data.Length);
 
         using var client = new TcpClient();
-        client.Connect(remoteEndPoint);
+        client.ReceiveTimeout = 2 * 1000;
+        
+        try
+        {
+            client.Connect(remoteEndPoint);
+        }
+        catch (SocketException)
+        {
+            addresses.TryRemove(remoteEndPoint, out _);
+            return;
+        }
         
         using var stream = client.GetStream();
         stream.Write(messageLength, 0, messageLength.Length);
         stream.Write(data, 0, data.Length);
     }
     
-    private static Package Receive(TcpClient node)
+    private Package Receive(TcpClient node)
     {
         using var stream = node.GetStream();
 
@@ -74,6 +92,9 @@ public abstract class P2PNode
             total += amount;
         } while (total < length);
         
-        return Serializer.FromBytes<Package>(memoryStream.GetBuffer());
+        var package = Serializer.FromBytes<Package>(memoryStream.GetBuffer());
+        addresses.Add(package.AddressFrom);
+
+        return package;
     }
 }
