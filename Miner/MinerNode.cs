@@ -46,14 +46,18 @@ public class MinerNode : Peer
         mempool.Enqueue(transaction);
         logger.LogInformation($"Store new transaction({mempool.Count}): {transaction.Hash}");
 
-        if (mempool.Count < MaxMempoolLength)
+        var transactions = mempool
+            .Take(MaxMempoolLength)
+            .ToArray();
+        
+        if (transactions.Length < MaxMempoolLength)
             return;
 
-        var (block, utxos) = BlockChain.MineBlock(Wallet, mempool, Subsidy, Difficult);
-        logger.LogInformation($"Successful mining block {block.Hash}, difficult {block.Difficult}");
-        
-        while (mempool.Count > 0)
+        for (var i = 0; i < transactions.Length; i++)
             mempool.TryDequeue(out _);
+
+        var (block, utxos) = BlockChain.MineBlock(Wallet, transactions, Subsidy, Difficult);
+        logger.LogInformation($"Successful mining block {block.Hash}, difficult {block.Difficult}");
 
         var spentUtxos = block
             .Transactions

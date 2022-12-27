@@ -74,7 +74,7 @@ public abstract class Peer : P2PNode
     private void UpdateAddresses(Package package)
     {
         foreach (var address in Serializer.FromBytes<IPEndPoint[]>(package.Data))
-            addresses.AddAddress(address);
+            addresses.Add(address);
     }
 
     private void SendVersion()
@@ -91,6 +91,8 @@ public abstract class Peer : P2PNode
 
     private void SendBlockChain(Package package)
     {
+        addresses.Add(package.AddressFrom);
+
         var remoteVersion = Serializer.FromBytes<Version>(package.Data);
         var height = blocksRepository.GetMaxHeight();
         
