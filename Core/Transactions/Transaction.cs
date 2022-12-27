@@ -2,6 +2,7 @@
 using System.Collections.Immutable;
 using System.Linq;
 using Core.Utils;
+using LiteDB;
 
 namespace Core.Transactions;
 
@@ -17,20 +18,30 @@ public class Transaction
         var inputSumHash = string.Concat(inputs.Select(input => input.Hash));
         var outputSumHash = string.Concat(outputs.Select(output => output.Hash));
         Hash = Hashing
-            .SumSha256(inputSumHash, outputSumHash)
+            .SumSha256(inputSumHash, outputSumHash, DateTimeOffset.Now.ToUnixTimeMilliseconds().ToString())
             .ToHexDigest();
     }
     
-    public string Hash { get; }
-    
-    public Input[] Inputs { get; }
-    
-    public Output[] Outputs { get; }
-    
-    public bool IsCoinbase { get; }
+    [BsonCtor]
+    public Transaction() {}
 
+    [BsonId]
+    public int Id { get; set; }
+    
+    public string Hash { get; set; }
+    
+    [BsonRef]
+    public Input[] Inputs { get; set; }
+    
+    [BsonRef]
+    public Output[] Outputs { get; set; }
+    
+    public bool IsCoinbase { get; set; }
+    
+    [BsonIgnore]
     public bool VerifiedSignature => Inputs.All(input => RsaUtils.VerifyData(input.PublicKey, input.Signature, Hash));
     
+    [BsonIgnore]
     public bool IsSelfToSelf
     {
         get

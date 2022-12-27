@@ -97,28 +97,23 @@ public abstract class Peer : P2PNode
             return;
         }
         
-        BlockChain.BeginTrans();
-        var blocks = BlockChain.ToArray();
-        var utxos = BlockChain.Utxos.ToArray();
-        BlockChain.EndTrans();
-
-        var data = Serializer.ToBytes(new SerializedBlockChain(blocks, utxos));
+        var data = Serializer.ToBytes(new SerializedBlockChain(BlockChain.ToArray()));
         var blockChainPackage = new Package(AddressFrom, PackageTypes.BlockChain, data);
         Send(package.AddressFrom, blockChainPackage);
     }
     
     private void UpdateBlockChain(Package package)
     {
-        var data = Serializer.FromBytes<SerializedBlockChain>(package.Data);
+        var blockChain = Serializer.FromBytes<SerializedBlockChain>(package.Data);
 
-        BlockChain.Reindex(data.Blocks, data.Utxos);
+        BlockChain.Reindex(blockChain.Blocks);
     }
 
     private void AddBlock(Package package)
     {
-        var transportedBlock = Serializer.FromBytes<Block>(package.Data);
+        var block = Serializer.FromBytes<Block>(package.Data);
 
-        BlockChain.TryAddBlock(transportedBlock);
+        BlockChain.TryAddBlock(block);
     }
     
     private void SendPackageToDns()

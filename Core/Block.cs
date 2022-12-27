@@ -31,32 +31,25 @@ public class Block
     }
     
     [BsonCtor]
-    public Block(ObjectId _id,
-        string previousBlockHash, int height, string hash, long timestamp, string merkleRoot, int difficult, long nonce)
-    {
-        PreviousBlockHash = previousBlockHash;
-        Height = height;
-        Hash = hash;
-        Timestamp = timestamp;
-        MerkleRoot = merkleRoot;
-        Difficult = difficult;
-        Nonce = nonce;
-    }
+    public Block() {}
     
-    public string PreviousBlockHash { get; }
+    [BsonId]
+    public int Id { get; set; }
     
-    public int Height { get; }
+    public string PreviousBlockHash { get; set; }
+    
+    public int Height { get; set; }
 
-    public string Hash { get; }
+    public string Hash { get; set; }
 
-    public long Timestamp { get; }
+    public long Timestamp { get; set; }
     
-    [BsonIgnore]
-    public Transaction[] Transactions { get; }
+    [BsonRef]
+    public Transaction[] Transactions { get; set; }
     
-    public string MerkleRoot { get; }
+    public string MerkleRoot { get; set; }
     
-    public int Difficult { get; }
+    public int Difficult { get; set; }
     
-    public long Nonce { get; }
+    public long Nonce { get; set; }
 }

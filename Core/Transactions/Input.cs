@@ -1,5 +1,6 @@
 ﻿using System;
 using Core.Utils;
+using LiteDB;
 
 namespace Core.Transactions;
 
@@ -10,14 +11,21 @@ public class Input
     {
         OutputHash = outputHash;
         PublicKey = publicKey;
+        Hash = Hashing
+            .SumSha256(OutputHash, PublicKey, DateTimeOffset.Now.ToUnixTimeMilliseconds().ToString())
+            .ToHexDigest();
     }
+
+    [BsonCtor]
+    public Input() {}
     
-    public string Hash => Hashing
-        .SumSha256(OutputHash, PublicKey, Signature ?? string.Empty)
-        .ToHexDigest();
+    [BsonId]
+    public int Id { get; set; }
     
-    public string OutputHash { get; }
-    
+    public string Hash { get; set; }
+
+    public string OutputHash { get; set; }
+
     public string Signature { get; set; }
 
     public string PublicKey { get; set; }
