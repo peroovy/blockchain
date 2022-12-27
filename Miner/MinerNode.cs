@@ -63,8 +63,7 @@ public class MinerNode : Peer
         
         var serializedBlock = new SerializedBlock(block, block.Transactions, utxos, spentUtxos);
         var blockPackage = new Package(AddressFrom, PackageTypes.Block, Serializer.ToBytes(serializedBlock));
-        foreach (var address in Addresses.Keys)
-            Send(address, blockPackage);
+        SendBroadcast(blockPackage);
     }
 
     private bool ValidateNewTransaction(Transaction transaction)
