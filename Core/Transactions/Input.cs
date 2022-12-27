@@ -6,20 +6,17 @@ namespace Core.Transactions;
 [Serializable]
 public class Input
 {
-    public Input(string previousTransactionHash, int outputIndex, string publicKey)
+    public Input(string outputHash, string publicKey)
     {
-        PreviousTransactionHash = previousTransactionHash;
-        OutputIndex = outputIndex;
+        OutputHash = outputHash;
         PublicKey = publicKey;
     }
     
-    public string PreviousTransactionHash { get; }
-    
     public string Hash => Hashing
-        .SumSha256(PreviousTransactionHash, OutputIndex.ToString(), PublicKey, Signature ?? string.Empty)
+        .SumSha256(OutputHash, PublicKey, Signature ?? string.Empty)
         .ToHexDigest();
     
-    public int OutputIndex { get; }
+    public string OutputHash { get; }
     
     public string Signature { get; set; }
 

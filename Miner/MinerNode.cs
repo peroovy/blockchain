@@ -3,7 +3,6 @@ using System.Linq;
 using System.Net;
 using Core;
 using Core.Network;
-using Core.Repositories;
 using Core.Transactions;
 using Core.Utils;
 using Microsoft.Extensions.Logging;
@@ -17,9 +16,7 @@ public class MinerNode : Peer
 
     private const int MaxMempoolLength = 1;
 
-    public MinerNode(IPEndPoint address, IPEndPoint dns, ILogger logger,
-        Wallet wallet, IBlocksRepository blocksRepository, IUtxosRepository utxosRepository) 
-        : base(address, dns, wallet, blocksRepository, utxosRepository)
+    public MinerNode(IPEndPoint address, IPEndPoint dns, ILogger logger, Wallet wallet) : base(address, dns, wallet)
     {
         this.logger = logger;
     }
@@ -46,28 +43,30 @@ public class MinerNode : Peer
         mempool.Enqueue(transaction);
         logger.LogInformation($"Store new transaction({mempool.Count}): {transaction.Hash}");
 
+        var transactions = TakeTransactions();
+        if (transactions is null)
+            return;
+
+        var block = BlockChain.CreateBlock(Wallet, transactions);
+        logger.LogInformation($"Successful mining block {block.Hash}, difficult {block.Difficult}");
+        
+        var blockPackage = new Package(AddressFrom, PackageTypes.Block, Serializer.ToBytes(block));
+        SendBroadcast(blockPackage);
+    }
+
+    private Transaction[] TakeTransactions()
+    {
         var transactions = mempool
             .Take(MaxMempoolLength)
             .ToArray();
         
         if (transactions.Length < MaxMempoolLength)
-            return;
+            return null;
 
         for (var i = 0; i < transactions.Length; i++)
             mempool.TryDequeue(out _);
 
-        var (block, utxos) = BlockChain.MineBlock(Wallet, transactions, Subsidy, Difficult);
-        logger.LogInformation($"Successful mining block {block.Hash}, difficult {block.Difficult}");
-
-        var spentUtxos = block
-            .Transactions
-            .SelectMany(tx => tx.Inputs)
-            .Select(input => new SpentUtxo(input.PreviousTransactionHash, input.OutputIndex))
-            .ToArray();
-        
-        var serializedBlock = new SerializedBlock(block, block.Transactions, utxos, spentUtxos);
-        var blockPackage = new Package(AddressFrom, PackageTypes.Block, Serializer.ToBytes(serializedBlock));
-        SendBroadcast(blockPackage);
+        return transactions;
     }
 
     private bool ValidateNewTransaction(Transaction transaction)
@@ -81,11 +80,11 @@ public class MinerNode : Peer
     {
         var uniqueSelectedOutputs = mempool
             .SelectMany(tx => tx.Inputs)
-            .Select(input => (input.PreviousTransactionHash, input.OutputIndex))
+            .Select(input => input.OutputHash)
             .ToHashSet();
         var existedLockedOutputs = transaction
             .Inputs
-            .Select(input => (input.PreviousTransactionHash, input.OutputIndex))
+            .Select(input => input.OutputHash)
             .Any(output => uniqueSelectedOutputs.Contains(output));
 
         return existedLockedOutputs;

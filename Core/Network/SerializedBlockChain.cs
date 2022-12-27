@@ -1,11 +1,12 @@
 ﻿using System;
+using Core.Transactions;
 
 namespace Core.Network;
 
 [Serializable]
 public class SerializedBlockChain
 {
-    public SerializedBlockChain(Block[] blocks, Utxo[] utxos)
+    public SerializedBlockChain(Block[] blocks, Output[] utxos)
     {
         Blocks = blocks;
         Utxos = utxos;
@@ -13,5 +14,5 @@ public class SerializedBlockChain
     
     public Block[] Blocks { get; }
     
-    public Utxo[] Utxos { get; }
+    public Output[] Utxos { get; }
 }

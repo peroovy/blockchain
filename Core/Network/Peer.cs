@@ -4,7 +4,6 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using Core.Repositories;
 using Core.Utils;
 
 namespace Core.Network;
@@ -16,22 +15,14 @@ public abstract class Peer : P2PNode
     private readonly ConcurrentDictionary<IPEndPoint, bool> addresses = new();
     
     private readonly IPEndPoint dns;
-    private readonly IBlocksRepository blocksRepository;
-    private readonly IUtxosRepository utxosRepository;
     
-    protected const int Subsidy = 60;
-    protected const int Difficult = 4;
-    private const int DnsRequestPeriodMilliseconds = 3 * 60 * 1000;
+    private const int DnsRequestPeriodMilliseconds = 2 * 60 * 1000;
 
-    protected Peer(IPEndPoint address, IPEndPoint dns, 
-        Wallet wallet, IBlocksRepository blocksRepository, IUtxosRepository utxosRepository) 
-        : base(address.Address, address.Port)
+    protected Peer(IPEndPoint address, IPEndPoint dns, Wallet wallet) : base(address.Address, address.Port)
     {
         this.dns = dns;
         Wallet = wallet;
-        this.blocksRepository = blocksRepository;
-        this.utxosRepository = utxosRepository;
-        BlockChain = new BlockChain(blocksRepository, utxosRepository);
+        BlockChain = new BlockChain();
     }
 
     public override void Run()
@@ -40,6 +31,9 @@ public abstract class Peer : P2PNode
 
         var scheduledGettingActiveNodesThread = new Thread(SendPackageToDns);
         scheduledGettingActiveNodesThread.Start();
+        
+        if (BlockChain.IsEmpty)
+            BlockChain.CreateGenesis(Wallet);
     }
 
     protected override void HandlePackage(Package package)
@@ -60,7 +54,7 @@ public abstract class Peer : P2PNode
                 break;
 
             case PackageTypes.Block:
-                AddBlockToChain(package);
+                AddBlock(package);
                 break;
         }
     }
@@ -79,13 +73,9 @@ public abstract class Peer : P2PNode
 
     private void SendVersion()
     {
-        if (addresses.Count == 0 && !blocksRepository.ExistsAny())
-            BlockChain.CreateGenesis(Wallet);
-        
-        var height = blocksRepository.GetMaxHeight();
-        var version = new Version(height, Wallet.PublicKeyHash);
-        
+        var version = new Version(BlockChain.Height, Wallet.PublicKeyHash);
         var versionPackage = new Package(AddressFrom, PackageTypes.Version, Serializer.ToBytes(version));
+        
         SendBroadcast(versionPackage);
     }
 
@@ -94,7 +84,7 @@ public abstract class Peer : P2PNode
         addresses.Add(package.AddressFrom);
 
         var remoteVersion = Serializer.FromBytes<Version>(package.Data);
-        var height = blocksRepository.GetMaxHeight();
+        var height = BlockChain.Height;
         
         if (height == remoteVersion.Height)
             return;
@@ -106,57 +96,29 @@ public abstract class Peer : P2PNode
             Send(package.AddressFrom, versionPackage);
             return;
         }
+        
+        BlockChain.BeginTrans();
+        var blocks = BlockChain.ToArray();
+        var utxos = BlockChain.Utxos.ToArray();
+        BlockChain.EndTrans();
 
-        SendBlockChain(remoteVersion, package);
+        var data = Serializer.ToBytes(new SerializedBlockChain(blocks, utxos));
+        var blockChainPackage = new Package(AddressFrom, PackageTypes.BlockChain, data);
+        Send(package.AddressFrom, blockChainPackage);
     }
-
-    private void SendBlockChain(Version versionFrom, Package package)
-    {
-        var blocks = blocksRepository
-            .GetBlockChain()
-            .ToArray();
-        var utxos = utxosRepository
-            .FindUtxosLockedWith(versionFrom.PublicKeyHash)
-            .ToArray();
-
-        var blockChain = new SerializedBlockChain(blocks, utxos);
-        var requestPackage = new Package(AddressFrom, PackageTypes.BlockChain, Serializer.ToBytes(blockChain));
-        Send(package.AddressFrom, requestPackage);
-    }
-
+    
     private void UpdateBlockChain(Package package)
     {
-        var blockChain = Serializer.FromBytes<SerializedBlockChain>(package.Data);
-        
-        blocksRepository.DeleteAll();
-        blocksRepository.InsertBulk(blockChain.Blocks);
+        var data = Serializer.FromBytes<SerializedBlockChain>(package.Data);
 
-        utxosRepository.DeleteAll();
-        utxosRepository.InsertBulk(blockChain.Utxos);
+        BlockChain.Reindex(data.Blocks, data.Utxos);
     }
 
-    private void AddBlockToChain(Package package)
+    private void AddBlock(Package package)
     {
-        var serializedBlock = Serializer.FromBytes<SerializedBlock>(package.Data);
-        var (block, utxos) = (serializedBlock.Block, serializedBlock.Utxos);
-        
-        var lastBlock = blocksRepository.GetLast();
-        var expectedMerkleRoot = MerkleTree
-            .Create(serializedBlock.Transactions.Select(tx => tx.Hash))
-            .Hash;
-        
-        if (!block.Hash.StartsWithBitsNumber(Difficult) 
-            || block.PreviousBlockHash != lastBlock.Hash 
-            || block.MerkleRoot != expectedMerkleRoot)
-        {
-            return;
-        }
-        
-        blocksRepository.Insert(block);
-        utxosRepository.InsertBulk(utxos);
+        var transportedBlock = Serializer.FromBytes<Block>(package.Data);
 
-        foreach (var spentUtxo in serializedBlock.SpentUtxos)
-            utxosRepository.DeleteOneIfExists(spentUtxo.TransactionHash, spentUtxo.Index);
+        BlockChain.TryAddBlock(transportedBlock);
     }
     
     private void SendPackageToDns()

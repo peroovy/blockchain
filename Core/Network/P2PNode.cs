@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -14,7 +13,6 @@ public abstract class P2PNode
     protected readonly IPEndPoint AddressFrom;
     
     private readonly TcpListener listener;
-    private readonly ConcurrentQueue<Package> packages = new();
 
     protected P2PNode(IPAddress address, int port)
     {
@@ -35,6 +33,7 @@ public abstract class P2PNode
                 Task.Run(() =>
                 {
                     var package = Receive(node);
+                    
                     HandlePackage(package);
                 });
             }

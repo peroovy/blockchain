@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Immutable;
 using System.Linq;
 using Core.Transactions;
 using Core.Utils;
@@ -53,7 +52,6 @@ public class Block
     public long Timestamp { get; }
     
     [BsonIgnore]
-    [field: NonSerialized]
     public Transaction[] Transactions { get; }
     
     public string MerkleRoot { get; }

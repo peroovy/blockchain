@@ -4,8 +4,6 @@ using System.Configuration;
 using System.Linq;
 using System.Net;
 using Core;
-using Core.Repositories.LiteDB;
-using LiteDB;
 using WalletPeer.Commands;
 
 namespace WalletPeer;
@@ -22,18 +20,14 @@ public static class Program
         Convert.ToInt32(ConfigurationManager.AppSettings["DnsPort"])
     );
 
-    private const string BlockChainDb = "blockchain.db";
     private const string PrivateKeyPath = "wallet";
     private const string PublicKeyPath = "wallet.pub";
 
     public static void Main(string[] args)
     {
-        using var database = new LiteDatabase(BlockChainDb);
-        var blocksRepository = new BlocksRepository(database);
-        var utxosRepository = new UtxosRepository(database);
         var wallet = Wallet.Load(PrivateKeyPath, PublicKeyPath);
 
-        var node = new WalletNode(Address, Dns, wallet, blocksRepository, utxosRepository);
+        var node = new WalletNode(Address, Dns, wallet);
         node.Run();
         
         var commands = GetConsoleCommands(node);

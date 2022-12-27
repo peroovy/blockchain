@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using Core;
 using Core.Network;
-using Core.Repositories;
 using Core.Transactions;
 using Core.Utils;
 
@@ -9,15 +8,13 @@ namespace WalletPeer;
 
 public class WalletNode : Peer
 {
-    public WalletNode(IPEndPoint address, IPEndPoint dns, 
-        Wallet wallet, IBlocksRepository blocksRepository, IUtxosRepository utxosRepository) 
-        : base(address, dns, wallet, blocksRepository, utxosRepository)
+    public WalletNode(IPEndPoint address, IPEndPoint dns, Wallet wallet) : base(address, dns, wallet)
     {
     }
 
     public string Address => Wallet.Address;
-    
-    public int Balance => BlockChain.GetBalance(Wallet.PublicKeyHash);
+
+    public int Balance => BlockChain.GetBalance(Wallet);
 
     public Transaction CreateTransaction(string receiverAddress, int amount)
     {

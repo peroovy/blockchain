@@ -1,75 +1,113 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using Core.Repositories;
 using Core.Transactions;
 using Core.Utils;
+using LiteDB;
 
 namespace Core;
 
-public class BlockChain
+public class BlockChain : IEnumerable<Block>
 {
-    private readonly IBlocksRepository blocksRepository;
-    private readonly IUtxosRepository utxosRepository;
+    private readonly LiteDatabase database = new("blockchain.db");
+    private readonly ILiteCollection<Block> blocksCollection;
+    private readonly ILiteCollection<Output> utxosCollection;
 
-    private const int GenesisSubsidy = 100;
-    private const int GenesisDifficult = 0;
+    private const int Subsidy = 60;
+    private const int Difficult = 4;
     
-    public BlockChain(IBlocksRepository blocksRepository, IUtxosRepository utxosRepository)
+    public BlockChain()
     {
-        this.blocksRepository = blocksRepository;
-        this.utxosRepository = utxosRepository;
+        blocksCollection = database.GetCollection<Block>();
+        utxosCollection = database.GetCollection<Output>();
+    }
+    
+    public int Height => IsEmpty ? 0 : Tail.Height;
+
+    public bool IsEmpty => !blocksCollection.FindAll().Any();
+
+    public IEnumerable<Output> Utxos => utxosCollection.FindAll();
+
+    private Block Tail => blocksCollection
+        .FindAll()
+        .OrderBy(block => (block.Height, -block.Timestamp))
+        .Last();
+
+    public void TryAddBlock(Block block)
+    {
+        var expectedMerkleRoot = MerkleTree
+            .Create(block.Transactions.Select(tx => tx.Hash))
+            .Hash;
+        
+        if (!block.Hash.StartsWithBitsNumber(Difficult) 
+            || block.PreviousBlockHash != Tail.Hash 
+            || block.MerkleRoot != expectedMerkleRoot)
+        {
+            return;
+        }
+
+        var utxos = block
+            .Transactions
+            .SelectMany(tx => tx.Outputs);
+
+        var spentUtxosHashes = block
+            .Transactions
+            .SelectMany(tx => tx.Inputs.Select(input => input.OutputHash));
+
+        BeginTrans();
+        blocksCollection.Insert(block);
+        utxosCollection.InsertBulk(utxos);
+        utxosCollection.DeleteMany(utxo => spentUtxosHashes.Contains(utxo.Hash));
+        EndTrans();
     }
 
     public void CreateGenesis(Wallet wallet)
     {
-        MineBlock(wallet, Array.Empty<Transaction>(), GenesisSubsidy, GenesisDifficult, isGenesis: true);
+        CreateBlock(wallet, Array.Empty<Transaction>(), isGenesis: true);
     }
-
-    public (Block block, Utxo[] utxos) MineBlock(
-        Wallet wallet, IEnumerable<Transaction> transactions, int subsidy, int difficult, bool isGenesis = false)
+    
+    public Block CreateBlock(Wallet wallet, IEnumerable<Transaction> transactions, bool isGenesis = false)
     {
         Block block;
         var transactionsWithCoinbase = transactions
-            .Prepend(Transaction.CreateCoinbase(wallet, subsidy))
+            .Prepend(Transaction.CreateCoinbase(wallet, Subsidy))
             .ToArray();
         
         if (isGenesis)
         {
-            block = MineBlock(Hashing.ZeroHash, 0, transactionsWithCoinbase, difficult);
+            block = MineBlock(Hashing.ZeroHash, 0, transactionsWithCoinbase, 0);
         }
         else
         {
-            var lastBlock = blocksRepository.GetLast();
-            block = MineBlock(lastBlock.Hash, lastBlock.Height, transactionsWithCoinbase, difficult);
+            var lastBlock = Tail;
+            block = MineBlock(lastBlock.Hash, lastBlock.Height, transactionsWithCoinbase, Difficult);
         }
 
-        blocksRepository.Insert(block);
-
-        var inputs = block
+        
+        var spentUtxos = block
             .Transactions
-            .SelectMany(transaction => transaction.Inputs)
-            .ToArray();
-
-        foreach (var input in inputs)
-            utxosRepository.DeleteOneIfExists(input.PreviousTransactionHash, input.OutputIndex);
+            .SelectMany(tx => tx.Inputs.Select(input => input.OutputHash))
+            .ToHashSet();
 
         var utxos = block
             .Transactions
-            .SelectMany(transaction => transaction.Outputs.Select((output, i) =>
-                new Utxo(transaction.Hash, i, output.Value, output.PublicKeyHash)))
+            .SelectMany(transaction => transaction.Outputs)
             .ToArray();
 
-        utxosRepository.InsertBulk(utxos);
-
-        return (block, utxos);
+        BeginTrans();
+        blocksCollection.Insert(block);
+        utxosCollection.InsertBulk(utxos);
+        utxosCollection.DeleteMany(utxo => spentUtxos.Contains(utxo.Hash));
+        EndTrans();
+        
+        return block;
     }
 
-    public int GetBalance(string publicKeyHash)
+    public int GetBalance(Wallet wallet)
     {
-        return utxosRepository
-            .FindUtxosLockedWith(publicKeyHash)
+        return FindUtxosLockedWith(wallet.PublicKeyHash)
             .Select(utxo => utxo.Value)
             .Sum();
     }
@@ -79,11 +117,10 @@ public class BlockChain
         var inputs = ImmutableArray.CreateBuilder<Input>();
         var accumulated = 0;
         
-        foreach (var utxo in utxosRepository
-                     .FindUtxosLockedWith(sender.PublicKeyHash)
+        foreach (var utxo in FindUtxosLockedWith(sender.PublicKeyHash)
                      .OrderBy(utxo => utxo.Value))
         {
-            var input = new Input(utxo.TransactionHash, utxo.Index, sender.PublicKey);
+            var input = new Input(utxo.Hash, sender.PublicKey);
             inputs.Add(input);
             
             accumulated += utxo.Value;
@@ -109,7 +146,43 @@ public class BlockChain
 
         return transaction;
     }
+    
+    public void Reindex(IEnumerable<Block> blocks, IEnumerable<Output> utxos)
+    {
+        BeginTrans();
+        blocksCollection.DeleteAll();
+        utxosCollection.DeleteAll();
 
+        blocksCollection.InsertBulk(blocks);
+        utxosCollection.InsertBulk(utxos);
+        EndTrans();
+    }
+    
+    public void BeginTrans()
+    {
+        if (!database.BeginTrans())
+            throw new InvalidOperationException("Found uncommited transaction in current thread");
+    }
+
+    public void EndTrans()
+    {
+        if (!database.Commit())
+            throw new InvalidOperationException("Transaction was not be started");
+    }
+
+    public IEnumerator<Block> GetEnumerator()
+    {
+        var last = Tail;
+
+        do
+        {
+            yield return last;
+
+            last = blocksCollection.FindOne(block => block.Hash == last.PreviousBlockHash);
+            
+        } while (last is not null);
+    }
+    
     private static Block MineBlock(string previousBlockHash, int previousHeight, Transaction[] transactions, int difficult)
     {
         var timestamp = DateTimeOffset.Now.ToUnixTimeSeconds();
@@ -127,4 +200,9 @@ public class BlockChain
 
         throw new InvalidOperationException("Not found nonce");
     }
+    
+    private IEnumerable<Output> FindUtxosLockedWith(string publicKeyHash) =>
+        utxosCollection.Find(utxo => utxo.PublicKeyHash == publicKeyHash);
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

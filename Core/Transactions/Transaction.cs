@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Core.Utils;
@@ -47,7 +46,7 @@ public class Transaction
     public static Transaction CreateCoinbase(Wallet wallet, int subsidy)
     {
         return new Transaction(
-            ImmutableArray.Create(new Input(Hashing.ZeroHash, -1, $"Reward to {wallet.Address}: {subsidy}")),
+            ImmutableArray.Create(new Input(Hashing.ZeroHash, $"Reward to {wallet.Address}: {subsidy}")),
             ImmutableArray.Create(new Output(subsidy, wallet.PublicKeyHash)),
             isCoinbase: true
         );
