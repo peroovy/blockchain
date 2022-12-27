@@ -24,6 +24,4 @@ public class Input
     public string Signature { get; set; }
 
     public string PublicKey { get; set; }
-
-    public bool BelongsTo(string publicKeyHash) => RsaUtils.HashPublicKey(PublicKey).ToHexDigest() == publicKeyHash;
 }

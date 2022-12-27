@@ -27,7 +27,7 @@ public class BlockChain
         MineBlock(wallet, Array.Empty<Transaction>(), GenesisSubsidy, GenesisDifficult, isGenesis: true);
     }
 
-    public (Block block, Transaction[], Utxo[] utxos, Input[] inputs) MineBlock(
+    public (Block block, Utxo[] utxos) MineBlock(
         Wallet wallet, IEnumerable<Transaction> transactions, int subsidy, int difficult, bool isGenesis = false)
     {
         Block block;
@@ -63,7 +63,7 @@ public class BlockChain
 
         utxosRepository.InsertBulk(utxos);
 
-        return (block, transactionsWithCoinbase, utxos, inputs);
+        return (block, utxos);
     }
 
     public int GetBalance(string publicKeyHash)
@@ -114,25 +114,17 @@ public class BlockChain
     {
         var timestamp = DateTimeOffset.Now.ToUnixTimeSeconds();
 
-        if (transactions.Any(transaction => !transaction.IsCoinbase && !transaction.VerifySignature()))
+        if (transactions.Any(transaction => !transaction.IsCoinbase && !transaction.VerifiedSignature))
             throw new InvalidTransactionException();
 
         for (var nonce = 0L; nonce < long.MaxValue; nonce++)
         {
             var block = new Block(previousBlockHash, previousHeight + 1, timestamp, transactions, difficult, nonce);
 
-            if (ValidateBlock(block, difficult))
+            if (block.Hash.StartsWithBitsNumber(difficult))
                 return block;
         }
 
         throw new InvalidOperationException("Not found nonce");
-    }
-
-    private static bool ValidateBlock(Block block, int expectedDifficult)
-    {
-        return block.Hash
-            .ToBits()
-            .Take(expectedDifficult)
-            .All(bit => !bit);
     }
 }

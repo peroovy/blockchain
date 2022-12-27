@@ -30,7 +30,19 @@ public class Transaction
     
     public bool IsCoinbase { get; }
 
-    public bool VerifySignature() => Inputs.All(input => RsaUtils.VerifyData(input.PublicKey, input.Signature, Hash));
+    public bool VerifiedSignature => Inputs.All(input => RsaUtils.VerifyData(input.PublicKey, input.Signature, Hash));
+    
+    public bool IsSelfToSelf
+    {
+        get
+        {
+            var inputHash = RsaUtils
+                .HashPublicKey(Inputs[0].PublicKey)
+                .ToHexDigest();
+
+            return Outputs.All(output => output.PublicKeyHash == inputHash);
+        }
+    }
 
     public static Transaction CreateCoinbase(Wallet wallet, int subsidy)
     {

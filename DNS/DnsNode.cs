@@ -8,10 +8,10 @@ using Microsoft.Extensions.Logging;
 
 namespace DNS;
 
-public class DnsNode : Node
+public class DnsNode : P2PNode
 {
     private readonly ILogger logger;
-    private static readonly ConcurrentDictionary<IPEndPoint, long> Addresses = new();
+    private readonly ConcurrentDictionary<IPEndPoint, long> addresses = new();
 
     private const int TtlSeconds = 3 * 60;
 
@@ -27,13 +27,13 @@ public class DnsNode : Node
         logger.LogInformation($"Connect with {addressFrom}");
         
         var now = DateTimeOffset.Now.ToUnixTimeSeconds();
-        var addresses = Addresses
+        var endPoints = addresses
             .Where(pair => !pair.Key.Equals(addressFrom) && now < pair.Value + TtlSeconds)
             .Select(pair => pair.Key)
             .ToArray();
-        Addresses[addressFrom] = now;
+        addresses[addressFrom] = now;
 
-        var responsePackage = new Package(AddressFrom, PackageTypes.Addresses, Serializer.ToBytes(addresses));
+        var responsePackage = new Package(AddressFrom, PackageTypes.Addresses, Serializer.ToBytes(endPoints));
         Send(addressFrom, responsePackage);
     }
 }

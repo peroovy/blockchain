@@ -5,12 +5,9 @@ namespace Core.Network;
 [Serializable]
 public enum PackageTypes
 {
-    Broadcast,
     Addresses,
-    HandshakeWithNetwork,
+    Version,
     BlockChain,
-    WantedBlockChain,
     Transaction,
-    Block,
-    TransactionConfirmation
+    Block
 }

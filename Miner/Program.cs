@@ -32,7 +32,7 @@ internal static class Program
         using var database = new LiteDatabase(BlockChainDb);
         var blocksRepository = new BlocksRepository(database);
         var utxosRepository = new UtxosRepository(database);
-        var wallet = Wallet.LoadFrom(PrivateKeyPath, PublicKeyPath);
+        var wallet = Wallet.Load(PrivateKeyPath, PublicKeyPath);
 
         var node = new MinerNode(Address, Dns, Logger, wallet, blocksRepository, utxosRepository);
         node.Run();

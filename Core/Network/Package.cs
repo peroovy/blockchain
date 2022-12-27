@@ -6,16 +6,16 @@ namespace Core.Network;
 [Serializable]
 public class Package
 {
-    public Package(IPEndPoint addressFrom, PackageTypes packageTypes, byte[] body)
+    public Package(IPEndPoint addressFrom, PackageTypes packageType, byte[] data)
     {
         AddressFrom = addressFrom;
-        PackageTypes = packageTypes;
-        Body = body;
+        PackageType = packageType;
+        Data = data;
     }
 
     public IPEndPoint AddressFrom { get; }
     
-    public PackageTypes PackageTypes { get; }
+    public PackageTypes PackageType { get; }
     
-    public byte[] Body { get; }
+    public byte[] Data { get; }
 }

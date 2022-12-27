@@ -8,13 +8,13 @@ using Core.Utils;
 
 namespace Core.Network;
 
-public abstract class Node
+public abstract class P2PNode
 {
     protected readonly IPEndPoint AddressFrom;
     
     private readonly TcpListener listener;
 
-    protected Node(IPAddress address, int port)
+    protected P2PNode(IPAddress address, int port)
     {
         AddressFrom = new IPEndPoint(address, port);
         listener = new TcpListener(new IPEndPoint(IPAddress.Parse("0.0.0.0"), port));

@@ -8,7 +8,7 @@ using Core.Utils;
 
 namespace Core.Network;
 
-public abstract class Peer : Node
+public abstract class Peer : P2PNode
 {
     protected readonly Wallet Wallet;
     protected readonly BlockChain BlockChain;
@@ -17,7 +17,9 @@ public abstract class Peer : Node
     private readonly IPEndPoint dns;
     private readonly IBlocksRepository blocksRepository;
     private readonly IUtxosRepository utxosRepository;
-
+    
+    protected const int Subsidy = 60;
+    protected const int Difficult = 4;
     private const int DnsRequestPeriodMilliseconds = 3 * 60 * 1000;
 
     protected Peer(IPEndPoint address, IPEndPoint dns, 
@@ -41,35 +43,35 @@ public abstract class Peer : Node
 
     protected override void HandlePackage(Package package)
     {
-        switch (package.PackageTypes)
+        switch (package.PackageType)
         {
             case PackageTypes.Addresses:
-                HandshakeWithNetwork(package);
+                UpdateAddresses(package);
+                SendVersion();
                 break;
             
-            case PackageTypes.HandshakeWithNetwork:
-                SendBlockChainToNewNode(package);
+            case PackageTypes.Version:
+                SendBlockChain(package);
                 break;
             
             case PackageTypes.BlockChain:
                 UpdateBlockChain(package);
                 break;
 
-            case PackageTypes.WantedBlockChain:
-                ReceiveWantedBlockChain(package);
-                break;
-            
             case PackageTypes.Block:
-                StoreNewBlock(package);
+                AddBlockToChain(package);
                 break;
         }
     }
 
-    private void HandshakeWithNetwork(Package package)
+    private void UpdateAddresses(Package package)
     {
-        foreach (var address in Serializer.FromBytes<IPEndPoint[]>(package.Body))
+        foreach (var address in Serializer.FromBytes<IPEndPoint[]>(package.Data))
             Addresses.AddAddress(address);
-        
+    }
+
+    private void SendVersion()
+    {
         if (Addresses.Count == 0 && !blocksRepository.ExistsAny())
         {
             BlockChain.CreateGenesis(Wallet);
@@ -79,16 +81,14 @@ public abstract class Peer : Node
         var height = blocksRepository.GetMaxHeight();
         var version = new Version(height, Wallet.PublicKeyHash);
         
-        var handshakePackage = new Package(AddressFrom, PackageTypes.HandshakeWithNetwork, Serializer.ToBytes(version));
+        var versionPackage = new Package(AddressFrom, PackageTypes.Version, Serializer.ToBytes(version));
         foreach (var address in Addresses.Keys)
-            Send(address, handshakePackage);
+            Send(address, versionPackage);
     }
 
-    private void SendBlockChainToNewNode(Package package)
+    private void SendBlockChain(Package package)
     {
-        Addresses.AddAddress(package.AddressFrom);
-
-        var remoteVersion = Serializer.FromBytes<Version>(package.Body);
+        var remoteVersion = Serializer.FromBytes<Version>(package.Data);
         var height = blocksRepository.GetMaxHeight();
         
         if (height == remoteVersion.Height)
@@ -97,8 +97,8 @@ public abstract class Peer : Node
         if (height < remoteVersion.Height)
         {
             var version = new Version(height, Wallet.PublicKeyHash);
-            var blockChainPackage = new Package(AddressFrom, PackageTypes.WantedBlockChain, Serializer.ToBytes(version));
-            Send(package.AddressFrom, blockChainPackage);
+            var versionPackage = new Package(AddressFrom, PackageTypes.Version, Serializer.ToBytes(version));
+            Send(package.AddressFrom, versionPackage);
             return;
         }
 
@@ -121,7 +121,7 @@ public abstract class Peer : Node
 
     private void UpdateBlockChain(Package package)
     {
-        var blockChain = Serializer.FromBytes<SerializedBlockChain>(package.Body);
+        var blockChain = Serializer.FromBytes<SerializedBlockChain>(package.Data);
         
         blocksRepository.DeleteAll();
         blocksRepository.InsertBulk(blockChain.Blocks);
@@ -130,15 +130,9 @@ public abstract class Peer : Node
         utxosRepository.InsertBulk(blockChain.Utxos);
     }
 
-    private void ReceiveWantedBlockChain(Package package)
+    private void AddBlockToChain(Package package)
     {
-        var versionFrom = Serializer.FromBytes<Version>(package.Body);
-        SendBlockChain(versionFrom, package);
-    }
-
-    private void StoreNewBlock(Package package)
-    {
-        var serializedBlock = Serializer.FromBytes<SerializedBlock>(package.Body);
+        var serializedBlock = Serializer.FromBytes<SerializedBlock>(package.Data);
         var (block, utxos) = (serializedBlock.Block, serializedBlock.Utxos);
         
         var lastBlock = blocksRepository.GetLast();
@@ -146,8 +140,12 @@ public abstract class Peer : Node
             .Create(serializedBlock.Transactions.Select(tx => tx.Hash))
             .Hash;
         
-        if (block.PreviousBlockHash != lastBlock.Hash || block.MerkleRoot != expectedMerkleRoot)
+        if (!block.Hash.StartsWithBitsNumber(Difficult) 
+            || block.PreviousBlockHash != lastBlock.Hash 
+            || block.MerkleRoot != expectedMerkleRoot)
+        {
             return;
+        }
         
         blocksRepository.Insert(block);
         utxosRepository.InsertBulk(utxos);

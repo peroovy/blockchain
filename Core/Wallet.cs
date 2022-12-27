@@ -21,7 +21,7 @@ public class Wallet
     
     public string Address { get; }
     
-    public static Wallet LoadFrom(string privateFilePath, string publicFilePath)
+    public static Wallet Load(string privateFilePath, string publicFilePath)
     {
         using var privateFile = File.Open(privateFilePath, FileMode.OpenOrCreate, FileAccess.ReadWrite);
         using var privateFileReader = new StreamReader(privateFile);

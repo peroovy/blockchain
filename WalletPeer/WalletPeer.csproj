@@ -118,7 +118,6 @@
     <ItemGroup>
         <Compile Include="Commands\AddressCommand.cs" />
         <Compile Include="Commands\BalanceCommand.cs" />
-        <Compile Include="Commands\ConfirmationsCommand.cs" />
         <Compile Include="Commands\HelpCommand.cs" />
         <Compile Include="Commands\ICommand.cs" />
         <Compile Include="Commands\SendCommand.cs" />

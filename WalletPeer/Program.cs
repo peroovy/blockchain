@@ -31,7 +31,7 @@ public static class Program
         using var database = new LiteDatabase(BlockChainDb);
         var blocksRepository = new BlocksRepository(database);
         var utxosRepository = new UtxosRepository(database);
-        var wallet = Wallet.LoadFrom(PrivateKeyPath, PublicKeyPath);
+        var wallet = Wallet.Load(PrivateKeyPath, PublicKeyPath);
 
         var node = new WalletNode(Address, Dns, wallet, blocksRepository, utxosRepository);
         node.Run();
@@ -61,8 +61,7 @@ public static class Program
         {
             new BalanceCommand(node), 
             new SendCommand(node),
-            new AddressCommand(node),
-            new ConfirmationsCommand(node)
+            new AddressCommand(node)
         };
         
         var help = new HelpCommand(commands);
