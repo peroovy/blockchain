@@ -55,7 +55,7 @@ public class Transaction
     public static Transaction CreateCoinbase(Wallet wallet, int subsidy)
     {
         return new Transaction(
-            ImmutableArray.Create(new Input(Hashing.ZeroHash, $"Reward to {wallet.Address}: {subsidy}")),
+            ImmutableArray.Create(new Input(Hashing.ZeroHash, Guid.NewGuid().ToString())),
             ImmutableArray.Create(new Output(subsidy, wallet.PublicKeyHash)),
             isCoinbase: true
         );
