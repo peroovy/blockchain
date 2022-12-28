@@ -15,7 +15,7 @@ public class SendCommand : ICommand
     
     public string Name => "send";
 
-    public string Description => "Сreates an unconfirmed transaction and storing to the mempool";
+    public string Description => "Сreate an unconfirmed transaction and store to the mempool";
 
     public void Execute()
     {

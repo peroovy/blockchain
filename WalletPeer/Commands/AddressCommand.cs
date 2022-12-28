@@ -14,7 +14,7 @@ public class AddressCommand : ICommand
     
     public string Name => "addr";
 
-    public string Description => "Shows your address";
+    public string Description => "Show your address";
     
     public void Execute()
     {

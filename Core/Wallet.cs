@@ -5,7 +5,7 @@ namespace Core;
 
 public class Wallet
 {
-    public Wallet(string privateKey, string publicKey)
+    private Wallet(string privateKey, string publicKey)
     {
         PrivateKey = privateKey;
         PublicKey = publicKey;

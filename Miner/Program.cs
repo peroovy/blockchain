@@ -30,7 +30,7 @@ internal static class Program
         var node = new MinerNode(Address, Dns, Logger, wallet);
         node.Run();
         
-        Logger.LogInformation($"Start on {Address}");
+        Logger.LogInformation($"Listen {Address}");
         
         Thread.Sleep(Timeout.Infinite);
     }
