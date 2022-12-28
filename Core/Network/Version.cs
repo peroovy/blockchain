@@ -6,13 +6,10 @@ namespace Core.Network;
 [Serializable]
 public class Version
 {
-    public Version(int height, string publicKeyHash)
+    public Version(int height)
     {
         Height = height;
-        PublicKeyHash = publicKeyHash;
     }
     
     public int Height { get; }
-    
-    public string PublicKeyHash { get; }
 }

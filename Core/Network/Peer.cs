@@ -2,6 +2,8 @@
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 using Core.Utils;
 
@@ -14,6 +16,8 @@ public abstract class Peer : P2PNode
     
     private readonly IPEndPoint dns;
     private readonly ConcurrentDictionary<IPEndPoint, bool> addresses = new();
+
+    private const int SendVersionPeriodMilliseconds = 1 * 60 * 1000;
 
     protected Peer(IPEndPoint address, IPEndPoint dns, Wallet wallet) : base(address.Address, address.Port)
     {
@@ -31,6 +35,30 @@ public abstract class Peer : P2PNode
         
         if (BlockChain.IsEmpty)
             BlockChain.CreateGenesis(Wallet);
+
+        var updateBlockChainThread = new Thread(() =>
+        {
+            while (true)
+            {
+                Thread.Sleep(SendVersionPeriodMilliseconds);
+
+                var version = new Version(BlockChain.Height);
+                var versionPackage = new Package(AddressFrom, PackageTypes.Version, Serializer.ToBytes(version));
+                
+                foreach (var addr in addresses.Keys)
+                {
+                    try
+                    {
+                        Send(addr, versionPackage);
+                    }
+                    catch (SocketException)
+                    {
+                        addresses.TryRemove(addr, out _);
+                    }
+                }
+            }
+        });
+        updateBlockChainThread.Start();
     }
 
     protected override void HandlePackage(Package package)
@@ -71,7 +99,7 @@ public abstract class Peer : P2PNode
 
     private void SendVersion()
     {
-        var version = new Version(BlockChain.Height, Wallet.PublicKeyHash);
+        var version = new Version(BlockChain.Height);
         var versionPackage = new Package(AddressFrom, PackageTypes.Version, Serializer.ToBytes(version));
         
         SendBroadcast(versionPackage);
@@ -87,7 +115,7 @@ public abstract class Peer : P2PNode
 
         if (height < remoteVersion.Height)
         {
-            var version = new Version(height, Wallet.PublicKeyHash);
+            var version = new Version(height);
             var versionPackage = new Package(AddressFrom, PackageTypes.Version, Serializer.ToBytes(version));
             Send(package.AddressFrom, versionPackage);
             return;
