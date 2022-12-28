@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -14,7 +13,6 @@ public abstract class P2PNode
     protected readonly IPEndPoint AddressFrom;
     
     private readonly TcpListener listener;
-    private readonly ConcurrentDictionary<IPEndPoint, bool> addresses = new();
 
     protected P2PNode(IPAddress address, int port)
     {
@@ -43,14 +41,8 @@ public abstract class P2PNode
         listenerThread.Start();
     }
 
-    protected abstract void HandlePackage(Package package); 
-    
-    protected void SendBroadcast(Package package)
-    {
-        foreach (var address in addresses.Keys)
-            Task.Run(() => Send(address, package));
-    }
-    
+    protected abstract void HandlePackage(Package package);
+
     protected void Send(IPEndPoint remoteEndPoint, Package package)
     {
         var data = Serializer.ToBytes(package);
@@ -58,17 +50,8 @@ public abstract class P2PNode
 
         using var client = new TcpClient();
         client.ReceiveTimeout = 2 * 1000;
-        
-        try
-        {
-            client.Connect(remoteEndPoint);
-        }
-        catch (SocketException)
-        {
-            addresses.TryRemove(remoteEndPoint, out _);
-            return;
-        }
-        
+        client.Connect(remoteEndPoint);
+
         using var stream = client.GetStream();
         stream.Write(messageLength, 0, messageLength.Length);
         stream.Write(data, 0, data.Length);
@@ -92,9 +75,6 @@ public abstract class P2PNode
             total += amount;
         } while (total < length);
         
-        var package = Serializer.FromBytes<Package>(memoryStream.GetBuffer());
-        addresses.Add(package.AddressFrom);
-
-        return package;
+        return Serializer.FromBytes<Package>(memoryStream.GetBuffer());
     }
 }

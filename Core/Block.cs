@@ -34,7 +34,7 @@ public class Block
     public Block() {}
     
     [BsonId]
-    public int Id { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid();
     
     public string PreviousBlockHash { get; set; }
     

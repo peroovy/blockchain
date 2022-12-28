@@ -26,7 +26,7 @@ public class Transaction
     public Transaction() {}
 
     [BsonId]
-    public int Id { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid();
     
     public string Hash { get; set; }
     

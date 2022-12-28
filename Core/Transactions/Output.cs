@@ -21,7 +21,7 @@ public class Output
     public Output() {}
 
     [BsonId]
-    public int Id { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid();
     
     public string Hash { get; set; }
     

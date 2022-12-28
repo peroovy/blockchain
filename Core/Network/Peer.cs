@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Net;
+using System.Threading.Tasks;
 using Core.Utils;
 
 namespace Core.Network;
@@ -11,6 +13,7 @@ public abstract class Peer : P2PNode
     protected readonly BlockChain BlockChain;
     
     private readonly IPEndPoint dns;
+    private readonly ConcurrentDictionary<IPEndPoint, bool> addresses = new();
 
     protected Peer(IPEndPoint address, IPEndPoint dns, Wallet wallet) : base(address.Address, address.Port)
     {
@@ -23,7 +26,7 @@ public abstract class Peer : P2PNode
     {
         base.Run();
 
-        var package = new Package(AddressFrom, PackageTypes.Addresses, Array.Empty<byte>());
+        var package = new Package(AddressFrom, PackageTypes.Connection, Array.Empty<byte>());
         Send(dns, package);
         
         if (BlockChain.IsEmpty)
@@ -32,11 +35,19 @@ public abstract class Peer : P2PNode
 
     protected override void HandlePackage(Package package)
     {
+        if (package.PackageType != PackageTypes.Addresses)
+            addresses.Add(package.AddressFrom);
+        
         switch (package.PackageType)
         {
             case PackageTypes.Addresses:
+            {
+                foreach (var addr in Serializer.FromBytes<IPEndPoint[]>(package.Data))
+                    addresses.Add(addr);
+                
                 SendVersion();
                 break;
+            }
             
             case PackageTypes.Version:
                 SendBlockChain(package);
@@ -50,6 +61,12 @@ public abstract class Peer : P2PNode
                 AddBlock(package);
                 break;
         }
+    }
+    
+    protected void SendBroadcast(Package package)
+    {
+        foreach (var address in addresses.Keys)
+            Task.Run(() => Send(address, package));
     }
 
     private void SendVersion()

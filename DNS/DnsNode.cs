@@ -21,7 +21,7 @@ public class DnsNode : P2PNode
     {
         var addressFrom = package.AddressFrom;
         
-        logger.LogInformation($"Connect with {addressFrom}");
+        logger.LogInformation($"Connects with {addressFrom}");
         
         var endPoints = addresses
             .Where(pair => !pair.Key.Equals(addressFrom))

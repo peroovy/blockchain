@@ -9,5 +9,6 @@ public enum PackageTypes
     Version,
     BlockChain,
     Transaction,
-    Block
+    Block,
+    Connection
 }

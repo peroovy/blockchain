@@ -23,8 +23,10 @@ public class BlockChain : IEnumerable<Block>
     public BlockChain()
     {
         blocksCollection = database
-            .GetCollection<Block>(BsonAutoId.ObjectId)
-            .Include(block => block.Transactions);
+            .GetCollection<Block>()
+            .Include("$.Transactions[*]")
+            .Include("$.Transactions[*].Inputs[*]")
+            .Include("$.Transactions[*].Outputs[*]");
 
         transactionsCollection = database
             .GetCollection<Transaction>()
