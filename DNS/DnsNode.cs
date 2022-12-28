@@ -30,6 +30,6 @@ public class DnsNode : P2PNode
         addresses[addressFrom] = true;
 
         var responsePackage = new Package(AddressFrom, PackageTypes.Addresses, Serializer.ToBytes(endPoints));
-        Send(addressFrom, responsePackage);
+        TrySend(addressFrom, responsePackage);
     }
 }

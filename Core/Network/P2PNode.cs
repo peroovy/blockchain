@@ -13,6 +13,7 @@ public abstract class P2PNode
     protected readonly IPEndPoint AddressFrom;
     
     private readonly TcpListener listener;
+    private readonly TimeSpan connectionTimeout = TimeSpan.FromSeconds(5);
 
     protected P2PNode(IPAddress address, int port)
     {
@@ -43,18 +44,25 @@ public abstract class P2PNode
 
     protected abstract void HandlePackage(Package package);
 
-    protected void Send(IPEndPoint remoteEndPoint, Package package)
+    protected bool TrySend(IPEndPoint remoteEndPoint, Package package)
     {
         var data = Serializer.ToBytes(package);
         var messageLength = BitConverter.GetBytes(data.Length);
 
         using var client = new TcpClient();
-        client.ReceiveTimeout = 2 * 1000;
-        client.Connect(remoteEndPoint);
+
+        client.BeginConnect(remoteEndPoint.Address, remoteEndPoint.Port, null, null)
+            .AsyncWaitHandle
+            .WaitOne(connectionTimeout, true);
+
+        if (!client.Connected)
+            return false;
 
         using var stream = client.GetStream();
         stream.Write(messageLength, 0, messageLength.Length);
         stream.Write(data, 0, data.Length);
+
+        return true;
     }
     
     private Package Receive(TcpClient node)

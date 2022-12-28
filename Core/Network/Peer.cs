@@ -31,7 +31,7 @@ public abstract class Peer : P2PNode
         base.Run();
 
         var package = new Package(AddressFrom, PackageTypes.Connection, Array.Empty<byte>());
-        Send(dns, package);
+        TrySend(dns, package);
         
         if (BlockChain.IsEmpty)
             BlockChain.CreateGenesis(Wallet);
@@ -47,14 +47,8 @@ public abstract class Peer : P2PNode
                 
                 foreach (var addr in addresses.Keys)
                 {
-                    try
-                    {
-                        Send(addr, versionPackage);
-                    }
-                    catch (SocketException)
-                    {
+                    if (!TrySend(addr, versionPackage))
                         addresses.TryRemove(addr, out _);
-                    }
                 }
             }
         });
@@ -94,7 +88,7 @@ public abstract class Peer : P2PNode
     protected void SendBroadcast(Package package)
     {
         foreach (var address in addresses.Keys)
-            Task.Run(() => Send(address, package));
+            Task.Run(() => TrySend(address, package));
     }
 
     private void SendVersion()
@@ -117,13 +111,13 @@ public abstract class Peer : P2PNode
         {
             var version = new Version(height);
             var versionPackage = new Package(AddressFrom, PackageTypes.Version, Serializer.ToBytes(version));
-            Send(package.AddressFrom, versionPackage);
+            TrySend(package.AddressFrom, versionPackage);
             return;
         }
         
         var data = Serializer.ToBytes(new SerializedBlockChain(BlockChain.ToArray()));
         var blockChainPackage = new Package(AddressFrom, PackageTypes.BlockChain, data);
-        Send(package.AddressFrom, blockChainPackage);
+        TrySend(package.AddressFrom, blockChainPackage);
     }
     
     private void UpdateBlockChain(Package package)
