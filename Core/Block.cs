@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Text;
 using Core.Transactions;
 using Core.Utils;
 using LiteDB;
@@ -32,14 +33,12 @@ public class Block
     
     [BsonCtor]
     public Block() {}
-    
-    [BsonId]
-    public Guid Id { get; set; } = Guid.NewGuid();
-    
+
     public string PreviousBlockHash { get; set; }
     
     public int Height { get; set; }
 
+    [BsonId]
     public string Hash { get; set; }
 
     public long Timestamp { get; set; }

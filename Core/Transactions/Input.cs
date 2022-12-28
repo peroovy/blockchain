@@ -18,10 +18,8 @@ public class Input
 
     [BsonCtor]
     public Input() {}
-    
+
     [BsonId]
-    public Guid Id { get; set; } = Guid.NewGuid();
-    
     public string Hash { get; set; }
 
     public string OutputHash { get; set; }
